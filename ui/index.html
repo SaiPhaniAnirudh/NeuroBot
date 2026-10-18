@@ -1262,9 +1262,6 @@ body::after {
       <button class="quick-upload-btn" onclick="switchTab('lab')" title="Load or Upload EEG Dataset">
         <span>⚡</span> Load Data
       </button>
-      <button class="quick-upload-btn" onclick="downloadProjectZip()" style="border-color:rgba(58,134,255,0.4);color:#93B8FF;background:rgba(58,134,255,0.12);" title="Download Complete Project ZIP Archive">
-        <span>📦</span> Download ZIP
-      </button>
     </div>
   </header>
 
@@ -1983,12 +1980,6 @@ function resizeWaveCanvas() {
 }
 window.addEventListener('resize', resizeWaveCanvas);
 
-/* ================================================================
-   PROJECT ARCHIVE DOWNLOAD HELPER
-   ================================================================ */
-function downloadProjectZip() {
-  window.location.href = `${API_BASE}/api/download/project-zip`;
-}
 
 /* ================================================================
    3D FULL HUMANOID ROBOT & BIONIC FINGER MOTION (THREE.JS)
