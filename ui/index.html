@@ -127,9 +127,8 @@ body::after {
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  position: sticky;
-  top: 14px;
-  z-index: 100;
+  position: relative;
+  z-index: 10;
   flex-wrap: wrap;
 }
 
@@ -3377,7 +3376,8 @@ async function checkBackendHealth() {
     if (res.ok) {
       const data = await res.json();
       pill.className = 'status-pill online';
-      txt.textContent = 'BACKEND ONLINE (:8000)';
+      const isCloud = window.location.hostname.includes('render.com') || window.location.hostname.includes('vercel.app') || !window.location.port;
+      txt.textContent = isCloud ? 'BACKEND ONLINE (CLOUD)' : `BACKEND ONLINE (:${window.location.port || '8000'})`;
     } else {
       throw new Error();
     }
