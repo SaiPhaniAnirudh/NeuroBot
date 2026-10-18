@@ -1,0 +1,22 @@
+name: Render 24/7 Keep-Alive
+
+on:
+  schedule:
+    # Runs every 10 minutes (Render sleeps after 15 minutes of inactivity)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual ping trigger from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping NeuroBot Health Endpoint
+        run: |
+          echo "Triggering keep-alive ping to Render at $(date -u)..."
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 30 "https://neurobot-nrnn.onrender.com/api/health")
+          echo "HTTP Response Status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "SUCCESS: NeuroBot is awake and healthy!"
+          else
+            echo "NOTE: Received HTTP $STATUS (service was either waking up or busy)."
+          fi
