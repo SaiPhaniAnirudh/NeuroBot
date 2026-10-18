@@ -1,0 +1,8 @@
+# Serving only: no PyTorch. Models are ONNX files run by onnxruntime.
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30
+python-multipart>=0.0.12
+numpy>=1.26,<3
+scipy>=1.13
+onnxruntime>=1.19
+mne>=1.8        # only used to read EDF/BDF uploads (imported lazily)

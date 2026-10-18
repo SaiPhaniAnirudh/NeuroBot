@@ -1,0 +1,3409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroBot — BCI Neural Decoding & Metallic Cybernetic Limbs</title>
+<meta name="description" content="State-of-the-art EEG Brain-Computer Interface decoding motor imagery commands with a trained deep network into 3D metallic cybernetic limb actuation, supporting custom EDF and tabular EEG data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+/* ================================================================
+   CYBERNETIC BCI DESIGN SYSTEM TOKENS
+   ================================================================ */
+:root {
+  --bg-dark: #050811;
+  --bg-deep: #070B16;
+  --bg-surface: rgba(10, 16, 28, 0.75);
+  --bg-surface-elevated: rgba(14, 23, 40, 0.85);
+  --bg-card: rgba(18, 28, 48, 0.55);
+  
+  --line-subtle: rgba(45, 65, 95, 0.35);
+  --line-bright: rgba(0, 245, 212, 0.35);
+  --line-focus: #00F5D4;
+  
+  --text-main: #F1F6FD;
+  --text-dim: #94A8C4;
+  --text-muted: #59708F;
+  
+  /* BCI Accent Colors */
+  --teal-neon: #00F5D4;
+  --teal-glow: rgba(0, 245, 212, 0.25);
+  --cyan-bright: #00E5FF;
+  --blue-neural: #3A86FF;
+  --violet-electric: #9D4EDD;
+  --amber-warning: #FFB703;
+  --rose-miss: #FF3366;
+  --green-match: #00F5D4;
+  
+  --chrome-metal: #E0EBF5;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 9999px;
+  --blur-glass: 20px;
+}
+
+/* ================================================================
+   BASE & RESET
+   ================================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.heading-font { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+/* Dynamic Animated Background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 900px 600px at 15% 15%, rgba(0, 245, 212, 0.07), transparent 70%),
+    radial-gradient(ellipse 800px 500px at 85% 25%, rgba(58, 134, 255, 0.08), transparent 70%),
+    radial-gradient(ellipse 700px 450px at 50% 85%, rgba(157, 78, 221, 0.06), transparent 70%);
+  animation: bgShift 28s ease-in-out infinite alternate;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+}
+
+@keyframes bgShift {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.05) translate(-20px, -15px); }
+  100% { transform: scale(1) translate(15px, 20px); }
+}
+
+/* ================================================================
+   LAYOUT SHELL
+   ================================================================ */
+.app-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+/* ================================================================
+   TOP NAVIGATION BAR
+   ================================================================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 22px;
+  margin-bottom: 24px;
+  background: var(--bg-surface);
+  backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  position: sticky;
+  top: 14px;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.brand-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--teal-neon), var(--blue-neural));
+  box-shadow: 0 0 20px rgba(0, 245, 212, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.brand-icon-inner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #050811;
+  border-radius: 6px;
+  background: transparent;
+  transform: rotate(45deg);
+  position: relative;
+}
+.brand-icon-inner::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: #050811;
+  border-radius: 2px;
+}
+
+.brand-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-title-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 245, 212, 0.12);
+  border: 1px solid rgba(0, 245, 212, 0.35);
+  color: var(--teal-neon);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.brand-subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+/* Nav Tabs */
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(12, 19, 32, 0.8);
+  padding: 5px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-subtle);
+}
+
+.nav-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.nav-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-tab-btn.active {
+  color: var(--teal-neon);
+  background: rgba(0, 245, 212, 0.1);
+  border-color: rgba(0, 245, 212, 0.3);
+  box-shadow: 0 0 15px rgba(0, 245, 212, 0.15);
+}
+
+.nav-tab-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 245, 212, 0.2);
+  color: var(--teal-neon);
+  font-weight: 700;
+}
+
+/* Topbar Status & Quick Actions */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: rgba(15, 23, 38, 0.8);
+  border: 1px solid var(--line-subtle);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.status-pill.online {
+  color: var(--teal-neon);
+  border-color: rgba(0, 245, 212, 0.25);
+  background: rgba(0, 245, 212, 0.06);
+}
+.status-pill.online .status-dot {
+  background: var(--teal-neon);
+  box-shadow: 0 0 8px var(--teal-neon);
+  animation: pulse 2s infinite;
+}
+.status-pill.offline {
+  color: var(--text-dim);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.quick-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.15), rgba(58, 134, 255, 0.15));
+  border: 1px solid var(--line-bright);
+  color: var(--teal-neon);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.quick-upload-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.25), rgba(58, 134, 255, 0.25));
+  box-shadow: 0 0 20px rgba(0, 245, 212, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   VIEW CONTENT PANELS (TABS)
+   ================================================================ */
+.tab-view {
+  display: none;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.tab-view.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Glassmorphism Panel Core */
+.glass-panel {
+  background: var(--bg-surface);
+  backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-title-icon {
+  font-size: 16px;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.panel-tag {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-subtle);
+  color: var(--text-muted);
+}
+
+/* ================================================================
+   TAB 1: LIVE 3D LIMB DECODER VIEW
+   ================================================================ */
+.decoder-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 22px;
+}
+
+@media(max-width: 1080px) {
+  .decoder-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Command Hero Card */
+.command-hero {
+  background: linear-gradient(135deg, rgba(14, 24, 44, 0.8), rgba(9, 15, 28, 0.9));
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  padding: 22px 26px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.command-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--teal-neon), var(--blue-neural), transparent);
+}
+
+.cmd-badge {
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  color: var(--teal-neon);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmd-name {
+  font-size: clamp(32px, 4.5vw, 48px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  color: #FFF;
+  transition: color 0.2s ease;
+}
+
+.cmd-meta {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.match-pill {
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--line-subtle);
+}
+.match-pill.match {
+  color: var(--teal-neon);
+  background: rgba(0, 245, 212, 0.08);
+  border-color: rgba(0, 245, 212, 0.3);
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.15);
+}
+.match-pill.miss {
+  color: var(--rose-miss);
+  background: rgba(255, 51, 102, 0.08);
+  border-color: rgba(255, 51, 102, 0.3);
+}
+
+/* 3D Robot Limb Stage */
+.robot-container {
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+
+.robot-stage-header {
+  padding: 14px 20px;
+  background: rgba(10, 16, 28, 0.85);
+  border-bottom: 1px solid var(--line-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.view-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-subtle);
+  background: rgba(18, 28, 48, 0.6);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.view-btn:hover {
+  color: var(--text-main);
+  border-color: var(--teal-neon);
+}
+.view-btn.active {
+  background: rgba(0, 245, 212, 0.12);
+  border-color: var(--teal-neon);
+  color: var(--teal-neon);
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.2);
+}
+
+.robot-stage-canvas {
+  width: 100%;
+  height: 520px;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 35%, #1c2b42 0%, #0d1827 50%, #070d17 100%);
+  border-bottom: 1px solid var(--line-subtle);
+  cursor: grab;
+}
+.robot-stage-canvas:active {
+  cursor: grabbing;
+}
+.robot-stage-canvas canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.stage-overlay-bottom {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.actuator-tag {
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(5, 8, 17, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-dim);
+}
+.pose-tag {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  padding: 6px 16px;
+  border-radius: 8px;
+  background: rgba(5, 8, 17, 0.9);
+  border: 1px solid var(--teal-neon);
+  color: var(--teal-neon);
+  box-shadow: 0 0 18px rgba(0, 245, 212, 0.25);
+}
+
+/* Finger Motion Testing Lab */
+.finger-lab-panel {
+  background: rgba(9, 15, 26, 0.95);
+  border-top: 1px solid var(--line-subtle);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideDown 0.2s ease forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fl-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--teal-neon);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+.fl-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fl-preset-btn {
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-subtle);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.fl-preset-btn:hover {
+  background: rgba(0, 245, 212, 0.12);
+  border-color: var(--teal-neon);
+  color: var(--teal-neon);
+}
+.fl-preset-btn.active {
+  background: rgba(0, 245, 212, 0.18);
+  border-color: var(--teal-neon);
+  color: var(--teal-neon);
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.2);
+}
+
+.fl-sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+@media(max-width: 900px) {
+  .fl-sliders-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media(max-width: 550px) {
+  .fl-sliders-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.fl-slider-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.fl-slider-lbl {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.fl-slider-lbl span:last-child {
+  color: var(--teal-neon);
+  font-family: 'IBM Plex Mono', monospace;
+}
+.fl-slider-input {
+  width: 100%;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #141F32;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+.fl-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--teal-neon);
+  box-shadow: 0 0 8px var(--teal-neon);
+  cursor: pointer;
+}
+
+
+/* Waveform Canvas & Controls */
+.waveform-panel {
+  margin-bottom: 20px;
+}
+
+#waveCanvas {
+  display: block;
+  width: 100%;
+  height: 220px;
+  background: #060A13;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-subtle);
+}
+
+.playback-cockpit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.ctrl-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--line-subtle);
+  color: var(--text-main);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ctrl-btn:hover {
+  border-color: var(--teal-neon);
+  color: var(--teal-neon);
+  background: rgba(0, 245, 212, 0.08);
+}
+
+.scrubber-slider {
+  flex: 1;
+  min-width: 160px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #141F32;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+.scrubber-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--teal-neon);
+  box-shadow: 0 0 12px var(--teal-neon);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.scrubber-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.speed-dropdown {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--line-subtle);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Sidebar Cards (Probabilities & Tasks) */
+.prob-card {
+  margin-bottom: 20px;
+}
+.prob-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.prob-label {
+  width: 110px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.prob-track {
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  position: relative;
+}
+.prob-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(0, 245, 212, 0.2);
+}
+.prob-val {
+  width: 50px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.prob-val.top {
+  color: var(--teal-neon);
+  font-weight: 700;
+}
+
+/* ================================================================
+   TAB 2: CUSTOM DATA LAB & INFERENCE STUDIO
+   ================================================================ */
+.lab-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+}
+
+@media(max-width: 960px) {
+  .lab-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dropzone-box {
+  border: 2px dashed rgba(0, 245, 212, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 38px 24px;
+  text-align: center;
+  background: rgba(0, 245, 212, 0.02);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  margin-bottom: 22px;
+}
+.dropzone-box:hover, .dropzone-box.drag-over {
+  border-color: var(--teal-neon);
+  background: rgba(0, 245, 212, 0.06);
+  box-shadow: 0 0 30px rgba(0, 245, 212, 0.15);
+}
+.dropzone-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+.dropzone-headline {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+.dropzone-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  max-width: 440px;
+  margin: 0 auto 16px;
+  line-height: 1.5;
+}
+.supported-formats-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.format-pill {
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-subtle);
+  color: var(--teal-neon);
+  font-weight: 600;
+}
+
+.preset-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+@media(max-width: 600px) {
+  .preset-actions-grid { grid-template-columns: 1fr; }
+}
+
+.preset-action-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--line-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.preset-action-card:hover {
+  border-color: var(--line-bright);
+  background: rgba(0, 245, 212, 0.05);
+  transform: translateY(-2px);
+}
+.pac-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.pac-desc {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+/* Config Parameters Grid */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.config-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.config-input, .config-select {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--line-subtle);
+  color: var(--text-main);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.config-input:focus, .config-select:focus {
+  border-color: var(--teal-neon);
+}
+
+/* Pipeline Progress Stepper */
+.stepper-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line-subtle);
+  transition: all 0.2s ease;
+}
+.stepper-step.completed {
+  border-color: rgba(0, 245, 212, 0.3);
+  background: rgba(0, 245, 212, 0.04);
+}
+.stepper-step.active {
+  border-color: var(--teal-neon);
+  background: rgba(0, 245, 212, 0.08);
+  box-shadow: 0 0 15px rgba(0, 245, 212, 0.12);
+}
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.stepper-step.completed .step-num {
+  background: var(--teal-neon);
+  color: #050811;
+}
+.stepper-step.active .step-num {
+  background: var(--teal-neon);
+  color: #050811;
+  animation: pulse 1.5s infinite;
+}
+.step-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.step-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.action-cta-btn {
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--teal-neon), var(--blue-neural));
+  border: none;
+  color: #050811;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 245, 212, 0.3);
+  transition: all 0.2s ease;
+}
+.action-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(0, 245, 212, 0.45);
+}
+
+/* ================================================================
+   TAB 3: EEG SIGNAL & CHANNEL INSPECTOR
+   ================================================================ */
+.inspector-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 24px;
+}
+@media(max-width: 1100px) {
+  .inspector-grid { grid-template-columns: 1fr; }
+}
+
+.topomap-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#topoCanvas {
+  max-width: 360px;
+  width: 100%;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #0D1626 0%, #060913 70%);
+  border: 1px solid var(--line-subtle);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.channel-detail-card {
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--line-subtle);
+  margin-top: 18px;
+  width: 100%;
+}
+.cdc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-neon);
+  margin-bottom: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.bands-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+.band-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.band-name {
+  width: 120px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.band-bar-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.band-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.2s ease;
+}
+.band-power-val {
+  width: 50px;
+  text-align: right;
+  font-size: 11.5px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text-dim);
+}
+
+/* ================================================================
+   TAB 4: SESSION ANALYTICS & BENCHMARKS
+   ================================================================ */
+.metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+@media(max-width: 800px) {
+  .metrics-strip { grid-template-columns: 1fr 1fr; }
+}
+
+.metric-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--line-subtle);
+  text-align: center;
+}
+.metric-num {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: var(--teal-neon);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-bottom: 4px;
+}
+.metric-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cm-matrix-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  margin-top: 12px;
+}
+.cm-matrix-table th {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 8px;
+  text-align: center;
+}
+.cm-matrix-table td {
+  text-align: center;
+  padding: 14px 10px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  transition: background 0.2s ease;
+}
+.cm-matrix-table .row-header {
+  text-align: right;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding-right: 14px;
+  background: none !important;
+}
+
+/* Timeline confidence canvas */
+#confTimelineCanvas {
+  width: 100%;
+  height: 120px;
+  background: #060A13;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-subtle);
+  margin-top: 14px;
+}
+
+/* ================================================================
+   MODAL / TOAST / OVERLAYS
+   ================================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.85);
+  backdrop-filter: blur(14px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.active {
+  display: flex;
+}
+.modal-card {
+  max-width: 520px;
+  width: 100%;
+  background: #0E1626;
+  border: 1px solid var(--teal-neon);
+  box-shadow: 0 0 40px rgba(0, 245, 212, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  text-align: center;
+}
+.spinner-ring {
+  width: 52px;
+  height: 52px;
+  border: 3px solid rgba(0, 245, 212, 0.15);
+  border-top-color: var(--teal-neon);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 18px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ==================== TOP NAVIGATION BAR ==================== -->
+  <header class="topbar">
+    <div class="brand-section" onclick="switchTab('decoder')">
+      <div class="brand-icon-box">
+        <div class="brand-icon-inner"></div>
+      </div>
+      <div>
+        <div class="brand-title">
+          NEUROBOT
+          <span class="brand-title-badge">MOTOR BCI</span>
+        </div>
+        <div class="brand-subtitle">BCI Motor Imagery Neural Decoder · 3D Cybernetic Limbs</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" id="tabBtn-decoder" onclick="switchTab('decoder')">
+        <span>🦾</span> 3D Limb Decoder
+      </button>
+      <button class="nav-tab-btn" id="tabBtn-lab" onclick="switchTab('lab')">
+        <span>🧪</span> Custom Data Lab
+        <span class="nav-tab-badge">Custom</span>
+      </button>
+      <button class="nav-tab-btn" id="tabBtn-inspector" onclick="switchTab('inspector')">
+        <span>🧠</span> Signal & 10-20 Cap
+      </button>
+      <button class="nav-tab-btn" id="tabBtn-analytics" onclick="switchTab('analytics')">
+        <span>📊</span> Session Analytics
+      </button>
+    </nav>
+
+    <!-- Topbar Actions -->
+    <div class="topbar-actions">
+      <div class="status-pill online" id="backendStatusPill">
+        <span class="status-dot"></span>
+        <span id="backendStatusText">CHECKING...</span>
+      </div>
+      <button class="quick-upload-btn" onclick="switchTab('lab')" title="Load or Upload EEG Dataset">
+        <span>⚡</span> Load Data
+      </button>
+      <button class="quick-upload-btn" onclick="downloadProjectZip()" style="border-color:rgba(58,134,255,0.4);color:#93B8FF;background:rgba(58,134,255,0.12);" title="Download Complete Project ZIP Archive">
+        <span>📦</span> Download ZIP
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== TAB 1: 3D LIMB DECODER ==================== -->
+  <main class="tab-view active" id="view-decoder">
+    
+    <!-- Command Readout Stage -->
+    <div class="command-hero">
+      <div>
+        <div class="cmd-badge">⚡ Real-Time Decoded Neural Intent</div>
+        <div class="cmd-name mono" id="cmdHeroValue">REST</div>
+        <div class="cmd-meta">
+          <span class="mono" id="cmdConfidenceText">Confidence: 98.2%</span>
+          <span>·</span>
+          <span class="mono" id="cmdTrueClassText">Ground Truth: Rest</span>
+          <span>·</span>
+          <span class="mono" id="cmdTimeText">t = 0.000s</span>
+        </div>
+      </div>
+      <div class="match-pill match" id="cmdMatchStatus">MATCH</div>
+    </div>
+
+    <div class="decoder-grid">
+      <!-- Left Column: 3D Limb Canvas & Waveform -->
+      <div>
+        <!-- 3D Robotic Stage -->
+        <div class="glass-panel robot-container">
+          <div class="robot-stage-header">
+            <div class="panel-title-wrap">
+              <span class="panel-title">Full Humanoid Cybernetic Robot · Three.js Laboratory Bay</span>
+              <span class="panel-tag mono" id="activePoseBadge">REST IDLE</span>
+            </div>
+            <div class="view-mode-group">
+              <button class="view-btn active" id="viewBtnArms" onclick="setRobotView('arms')">🦾 Arms & Fists</button>
+              <button class="view-btn" id="viewBtnLegs" onclick="setRobotView('legs')">🦿 Legs & Feet</button>
+              <button class="view-btn" id="viewBtnAll" onclick="setRobotView('all')">🤖 Entire Robot</button>
+              <button class="view-btn" id="btnToggleFingerLab" onclick="toggleFingerLab()" style="border-color:var(--teal-neon);color:var(--teal-neon);">🖐️ Test Fingers</button>
+              <button class="view-btn" onclick="resetRobotCamera()" title="Reset Camera">⟲</button>
+            </div>
+          </div>
+
+          <div class="robot-stage-canvas" id="robotStage">
+            <div class="stage-overlay-bottom">
+              <div class="actuator-tag" id="robotSpecTag">FULL HUMANOID CHASSIS: TORSO REACTOR · 5 ARTICULATED DIGITS (FINGER-BCI CLASSES: THUMB, INDEX, MIDDLE, PINKY)</div>
+              <div class="pose-tag" id="activeLimbTag">REST</div>
+            </div>
+          </div>
+
+          <!-- Interactive Finger Motion Lab Drawer -->
+          <div id="fingerLabPanel" class="finger-lab-panel" style="display:none;">
+            <div class="fl-header">
+              <div class="fl-title">
+                <span>🖐️</span> FINGER KINEMATICS TEST · MANUAL CONTROL, NOT EEG-DECODED
+              </div>
+              <div class="fl-presets">
+                <button class="fl-preset-btn active" id="btnPresetFist" onclick="applyFingerPreset('fist')">✊ Power Fist</button>
+                <button class="fl-preset-btn" id="btnPresetOpen" onclick="applyFingerPreset('open')">🖐️ Open Palm</button>
+                <button class="fl-preset-btn" id="btnPresetPoint" onclick="applyFingerPreset('point')">☝️ Point Index</button>
+                <button class="fl-preset-btn" id="btnPresetPeace" onclick="applyFingerPreset('peace')">✌️ Peace / V</button>
+                <button class="fl-preset-btn" id="btnPresetPinch" onclick="applyFingerPreset('pinch')">🤏 Precision Pinch</button>
+                <button class="fl-preset-btn" id="btnPresetWave" onclick="toggleFingerWave()">🌊 Auto Wave</button>
+                <button class="fl-preset-btn" id="btnPresetNeural" onclick="applyFingerPreset('neural')" style="border-color:var(--teal-neon);color:var(--teal-neon);">⚡ BCI Neural Mode</button>
+              </div>
+            </div>
+
+            <!-- Hand Target Selector & Sliders -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Target Hand:</span>
+                <button class="fl-preset-btn active" id="btnHandBoth" onclick="setFingerTargetHand('both')">Dual Hands</button>
+                <button class="fl-preset-btn" id="btnHandLeft" onclick="setFingerTargetHand('left')">Left Hand</button>
+                <button class="fl-preset-btn" id="btnHandRight" onclick="setFingerTargetHand('right')">Right Hand</button>
+              </div>
+              <div class="mono" id="fingerAngleTelemetry" style="font-size:11px;color:var(--teal-neon);">Knuckle Flexion: 0° | Inter-Phalanx: 0°</div>
+            </div>
+
+            <div class="fl-sliders-grid">
+              <div class="fl-slider-box" style="border-color:rgba(0,245,212,0.3);background:rgba(0,245,212,0.03);">
+                <div class="fl-slider-lbl"><span>✊ Master Grip</span><span id="lblGripMaster">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripMaster" min="0" max="100" value="0" oninput="onMasterGripSlider(this.value)">
+              </div>
+              <div class="fl-slider-box">
+                <div class="fl-slider-lbl"><span>👍 Thumb (2-Axis)</span><span id="lblGripThumb">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripThumb" min="0" max="100" value="0" oninput="onSingleFingerSlider('thumb', this.value)">
+              </div>
+              <div class="fl-slider-box">
+                <div class="fl-slider-lbl"><span>☝️ Index Digit</span><span id="lblGripIndex">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripIndex" min="0" max="100" value="0" oninput="onSingleFingerSlider('index', this.value)">
+              </div>
+              <div class="fl-slider-box">
+                <div class="fl-slider-lbl"><span>🖕 Middle Digit</span><span id="lblGripMiddle">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripMiddle" min="0" max="100" value="0" oninput="onSingleFingerSlider('middle', this.value)">
+              </div>
+              <div class="fl-slider-box">
+                <div class="fl-slider-lbl"><span>💍 Ring (no decoder class)</span><span id="lblGripRing">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripRing" min="0" max="100" value="0" oninput="onSingleFingerSlider('ring', this.value)">
+              </div>
+              <div class="fl-slider-box">
+                <div class="fl-slider-lbl"><span>🤙 Pinky Digit</span><span id="lblGripPinky">0%</span></div>
+                <input type="range" class="fl-slider-input" id="sliderGripPinky" min="0" max="100" value="0" oninput="onSingleFingerSlider('pinky', this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Waveform Oscilloscope & Playback Controls -->
+        <div class="glass-panel waveform-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-title-icon">📈</span>
+              <span class="panel-title">EEG Signal Window (64-Ch Common Average Referenced & Bandpass Filtered)</span>
+            </div>
+            <span class="panel-tag mono" id="sourceBadge">Source: Bundled Sample</span>
+          </div>
+
+          <canvas id="waveCanvas" height="220"></canvas>
+
+          <div class="playback-cockpit">
+            <button class="ctrl-btn" id="playBtn" onclick="togglePlay()" title="Play / Pause">▶</button>
+            <button class="ctrl-btn" onclick="step(-1)" title="Previous Window">◀</button>
+            <button class="ctrl-btn" onclick="step(1)" title="Next Window">▶</button>
+            <input type="range" class="scrubber-slider" id="scrubber" min="0" max="0" value="0">
+            <select class="speed-dropdown" id="speedSelect">
+              <option value="500">0.5×</option>
+              <option value="250" selected>1.0× Real-Time</option>
+              <option value="125">2.0×</option>
+              <option value="50">5.0×</option>
+            </select>
+            <span class="mono" id="playbackProgress" style="font-size:12px;color:var(--text-dim);min-width:70px;text-align:right;">0 / 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Softmax Probabilities & Task Switcher -->
+      <div>
+        <!-- Class Probabilities Panel -->
+        <div class="glass-panel prob-card">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-title-icon">📊</span>
+              <span class="panel-title">Class Probabilities</span>
+            </div>
+            <span class="panel-tag mono">SOFTMAX</span>
+          </div>
+          <div id="probBarsContainer"></div>
+        </div>
+
+        <!-- Task Selector & Preset Quick Load -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-title-icon">⚙️</span>
+              <span class="panel-title">Active Motor Task</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="preset-action-card" id="taskBtnLeftRight" onclick="loadPresetTask('left_right')">
+              <div class="pac-title">🦾 Left vs. Right Fist</div>
+              <div class="pac-desc">Decodes Left Fist, Rest, and Right Fist motor imagery from sensorimotor C3/C4 cortex.</div>
+            </button>
+            <button class="preset-action-card" id="taskBtnFistsFeet" onclick="loadPresetTask('fists_feet')">
+              <div class="pac-title">🦿 Both Fists vs. Both Feet</div>
+              <div class="pac-desc">Decodes bilateral hand clenching vs. bionic feet extension.</div>
+            </button>
+          </div>
+
+          <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line-subtle);">
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Need to decode custom EEG data?</div>
+            <button class="action-cta-btn" onclick="switchTab('lab')">
+              <span>📂 Open Custom Data Lab</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 2: CUSTOM DATA LAB ==================== -->
+  <main class="tab-view" id="view-lab">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title-icon">🧪</span>
+          <span class="panel-title">Custom EEG Ingestion & Neural Decoding Studio</span>
+        </div>
+        <span class="panel-tag">SUPPORT FOR EDF, EDF+, CSV, TSV & JSON</span>
+      </div>
+
+      <div class="lab-grid">
+        <!-- Left: Upload Zone & Presets -->
+        <div>
+          <!-- File Dropzone -->
+          <div class="dropzone-box" id="dropzoneBox" onclick="document.getElementById('hiddenFileInput').click()">
+            <div class="dropzone-icon">📥</div>
+            <div class="dropzone-headline">Click or Drag & Drop EEG Files Here</div>
+            <div class="dropzone-sub">
+              Upload clinical or BCI headset EEG recordings. The pipeline will automatically resample, apply Common Average Referencing (CAR), 4-40Hz bandpass filter, and decode with the trained NeuroBot model.
+            </div>
+            <div class="supported-formats-pills">
+              <span class="format-pill">.EDF / .EDF+</span>
+              <span class="format-pill">.CSV (64-Ch)</span>
+              <span class="format-pill">.TSV</span>
+              <span class="format-pill">.JSON Log</span>
+            </div>
+            <input type="file" id="hiddenFileInput" style="display:none;" accept=".edf,.bdf,.csv,.tsv,.json">
+          </div>
+
+          <!-- Quick Presets & Downloaders -->
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Instant Testing Presets & Sample Files</div>
+          <div class="preset-actions-grid">
+            <div class="preset-action-card" onclick="generateSyntheticDemo('left_right')">
+              <div class="pac-title">⚡ Synthetic Left/Right Trial</div>
+              <div class="pac-desc">Generates 15s of realistic EEG with simulated 10Hz Mu rhythm desynchronization.</div>
+            </div>
+            <div class="preset-action-card" onclick="generateSyntheticDemo('fists_feet')">
+              <div class="pac-title">⚡ Synthetic Fists/Feet Trial</div>
+              <div class="pac-desc">Simulates alternating Rest, Both Fists, and Both Feet sensorimotor bursts.</div>
+            </div>
+            <div class="preset-action-card" onclick="downloadSampleCsv()">
+              <div class="pac-title">📥 Download Sample CSV</div>
+              <div class="pac-desc">Downloads a 64-channel 160Hz formatted CSV ready to test upload.</div>
+            </div>
+            <div class="preset-action-card" onclick="loadPresetTask('left_right')">
+              <div class="pac-title">📁 Bundled Replay Log</div>
+              <div class="pac-desc">Loads the stored replay log of the selected task.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Preprocessing Configuration & Live Pipeline -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">Pipeline Parameters</div>
+          <div class="config-grid">
+            <div class="config-field">
+              <label class="config-label">Sampling Rate (Hz)</label>
+              <input type="number" id="cfgSfreq" class="config-input" value="160">
+            </div>
+            <div class="config-field">
+              <label class="config-label">Task Family</label>
+              <select id="cfgTask" class="config-select">
+                <option value="left_right">Left vs. Right Fist</option>
+                <option value="fists_feet">Both Fists vs. Both Feet</option>
+              </select>
+            </div>
+            <div class="config-field">
+              <label class="config-label">Bandpass Filter</label>
+              <input type="text" class="config-input" value="4.0 Hz – 40.0 Hz" disabled>
+            </div>
+            <div class="config-field">
+              <label class="config-label">Spatial Reference</label>
+              <input type="text" class="config-input" value="Common Average (CAR)" disabled>
+            </div>
+          </div>
+
+          <!-- Pipeline Processing Stepper -->
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Decoding Pipeline Status</div>
+          <div class="stepper-wrap">
+            <div class="stepper-step completed" id="step1">
+              <div class="step-num">✓</div>
+              <div>
+                <div class="step-text">1. Input Ingestion</div>
+                <div class="step-detail" id="step1-detail">Ready to receive file or synthetic stream</div>
+              </div>
+            </div>
+            <div class="stepper-step" id="step2">
+              <div class="step-num">2</div>
+              <div>
+                <div class="step-text">2. Channel Standardization</div>
+                <div class="step-detail" id="step2-detail">Standard 10-20 montage alignment (64 channels)</div>
+              </div>
+            </div>
+            <div class="stepper-step" id="step3">
+              <div class="step-num">3</div>
+              <div>
+                <div class="step-text">3. CAR & 4-40Hz Bandpass Filter</div>
+                <div class="step-detail" id="step3-detail">Zero-phase 4–40 Hz FIR filter (same as in training)</div>
+              </div>
+            </div>
+            <div class="stepper-step" id="step4">
+              <div class="step-num">4</div>
+              <div>
+                <div class="step-text">4. Model inference</div>
+                <div class="step-detail" id="step4-detail">Trained model, 1 s windows every 125 ms</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Launch Button -->
+          <button class="action-cta-btn" id="launchLabSessionBtn" onclick="launchCustomSession()" disabled>
+            <span>🚀 Launch Decoded Session in 3D Limbs</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 3: SIGNAL & 10-20 CAP ==================== -->
+  <main class="tab-view" id="view-inspector">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title-icon">🧠</span>
+          <span class="panel-title">10-20 International Electrode Cap & Channel Telemetry</span>
+        </div>
+        <span class="panel-tag mono">64-CHANNEL SENSORIMOTOR TOPOGRAPHY</span>
+      </div>
+
+      <div class="inspector-grid">
+        <!-- Left: 2D EEG Topographic Map Canvas -->
+        <div class="topomap-box">
+          <canvas id="topoCanvas" width="360" height="360"></canvas>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:12px;text-align:center;">
+            Click any electrode node on the 10-20 montage above to inspect its real-time voltage and frequency spectrum.
+          </div>
+
+          <div class="channel-detail-card">
+            <div class="cdc-title" id="selectedChannelLabel">CH: C3 (LEFT MOTOR CORTEX)</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">
+              Primary sensorimotor area corresponding to right hand/fist motor imagery desynchronization.
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
+              <div>RMS: <span class="mono" style="color:var(--teal-neon);" id="chanRms">14.2 µV</span></div>
+              <div>Peak-to-Peak: <span class="mono" style="color:var(--teal-neon);" id="chanP2p">68.4 µV</span></div>
+              <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">+18.5 dB</span></div>
+              <div>Status: <span class="mono" style="color:var(--teal-neon);">CALIBRATED</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Power Spectrum Breakdown & Channel Traces -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Frequency Band Power Spectrum</div>
+          <div class="bands-container">
+            <div class="band-row">
+              <div class="band-name">Delta (0.5 – 4 Hz)</div>
+              <div class="band-bar-track">
+                <div class="band-bar-fill" id="bandFillDelta" style="background:var(--text-muted);width:25%;"></div>
+              </div>
+              <div class="band-power-val" id="bandValDelta">12%</div>
+            </div>
+            <div class="band-row">
+              <div class="band-name">Theta (4 – 8 Hz)</div>
+              <div class="band-bar-track">
+                <div class="band-bar-fill" id="bandFillTheta" style="background:var(--blue-neural);width:35%;"></div>
+              </div>
+              <div class="band-power-val" id="bandValTheta">18%</div>
+            </div>
+            <div class="band-row">
+              <div class="band-name" style="color:var(--teal-neon);font-weight:700;">Mu / Alpha (8 – 12 Hz)</div>
+              <div class="band-bar-track">
+                <div class="band-bar-fill" id="bandFillAlpha" style="background:var(--teal-neon);box-shadow:0 0 10px var(--teal-neon);width:65%;"></div>
+              </div>
+              <div class="band-power-val" id="bandValAlpha" style="color:var(--teal-neon);font-weight:700;">45%</div>
+            </div>
+            <div class="band-row">
+              <div class="band-name">Beta (12 – 30 Hz)</div>
+              <div class="band-bar-track">
+                <div class="band-bar-fill" id="bandFillBeta" style="background:var(--amber-warning);width:40%;"></div>
+              </div>
+              <div class="band-power-val" id="bandValBeta">20%</div>
+            </div>
+            <div class="band-row">
+              <div class="band-name">Gamma (30 – 45 Hz)</div>
+              <div class="band-bar-track">
+                <div class="band-bar-fill" id="bandFillGamma" style="background:var(--violet-electric);width:15%;"></div>
+              </div>
+              <div class="band-power-val" id="bandValGamma">5%</div>
+            </div>
+          </div>
+
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px;">Channel Signal Oscilloscope</div>
+          <canvas id="singleChannelCanvas" width="560" height="160" style="width:100%;height:160px;background:#060A13;border-radius:var(--radius-md);border:1px solid var(--line-subtle);display:block;"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== TAB 4: SESSION ANALYTICS ==================== -->
+  <main class="tab-view" id="view-analytics">
+    <div class="glass-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title-icon">📊</span>
+          <span class="panel-title">Session Performance Metrics & Confusion Matrix</span>
+        </div>
+        <span class="panel-tag mono">PER-WINDOW EVALUATION OF THE LOADED LOG</span>
+      </div>
+
+      <!-- Performance Metrics Strip -->
+      <div class="metrics-strip">
+        <div class="metric-card">
+          <div class="metric-num" id="statAccuracy">64.2%</div>
+          <div class="metric-lbl">Overall Accuracy (3-Class)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num" id="statWindowsCount">338</div>
+          <div class="metric-lbl">Windows Decoded</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num" id="statMeanConf">84.7%</div>
+          <div class="metric-lbl">Mean Softmax Confidence</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-num" style="color:var(--blue-neural);">125 ms</div>
+          <div class="metric-lbl">Inference Cadence (Stride)</div>
+        </div>
+      </div>
+
+      <!-- Confusion Matrix Heatmap -->
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Confusion Matrix Heatmap</div>
+      <table class="cm-matrix-table" id="analyticsConfusionMatrix"></table>
+
+      <!-- Confidence Timeline -->
+      <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin:28px 0 10px;">Session Confidence Timeline Over Time</div>
+      <canvas id="confTimelineCanvas" height="120"></canvas>
+
+      <!-- Export Actions -->
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+        <button class="view-btn" onclick="exportSessionJson()">📥 Export Full Inference Log (.JSON)</button>
+        <button class="view-btn" onclick="exportSummaryCsv()">📊 Export Summary (.CSV)</button>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Loading Modal Overlay -->
+<div class="modal-overlay" id="loadingModal">
+  <div class="modal-card">
+    <div class="spinner-ring"></div>
+    <div style="font-size:16px;font-weight:700;color:#FFF;margin-bottom:6px;" id="loadingModalTitle">Decoding Neural Signals...</div>
+    <div style="font-size:13px;color:var(--text-dim);" id="loadingModalSub">Applying CAR & 4-40Hz filtering, batch inference</div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   APPLICATION STATE
+   ================================================================ */
+const API_BASE = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8000';
+let activeTab = 'decoder';
+
+let logData = null;
+let records = [];
+let labelOrder = ['left', 'rest', 'right'];
+let currentIdx = 0;
+let playing = false;
+let playTimer = null;
+let currentTask = 'left_right';
+
+let selectedChannelName = 'C3';
+let selectedChannelIndex = 8;
+
+const TASK_FILES = {
+  left_right: 'sample_task_a_left_right.json',
+  fists_feet: 'sample_task_b_fists_feet.json',
+};
+
+const KNOWN_COLORS = {
+  left: '#3A86FF',
+  right: '#FFB703',
+  rest: '#8295AC',
+  both_fists: '#3A86FF',
+  both_feet: '#FFB703',
+};
+const PALETTE = ['#00F5D4', '#3A86FF', '#9D4EDD', '#FFB703', '#FF3366', '#00E5FF'];
+
+function colorFor(label, index) {
+  return KNOWN_COLORS[label] || PALETTE[(index || 0) % PALETTE.length];
+}
+
+function displayName(label) {
+  if (!label) return '—';
+  return label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/* ================================================================
+   NAVIGATION TABS
+   ================================================================ */
+function switchTab(tabId) {
+  activeTab = tabId;
+  document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab-btn').forEach(el => el.classList.remove('active'));
+
+  const viewEl = document.getElementById('view-' + tabId);
+  const btnEl = document.getElementById('tabBtn-' + tabId);
+  if (viewEl) viewEl.classList.add('active');
+  if (btnEl) btnEl.classList.add('active');
+
+  if (tabId === 'decoder') {
+    resizeRobot();
+    resizeWaveCanvas();
+  } else if (tabId === 'inspector') {
+    drawTopomap();
+    drawSingleChannelTrace();
+  } else if (tabId === 'analytics') {
+    drawConfidenceTimeline();
+  }
+}
+
+/* ================================================================
+   SESSION INITIALIZATION & PLAYBACK CONTROLS
+   ================================================================ */
+function setupSession(data, taskKey, sourceName) {
+  logData = data;
+  records = data.records || [];
+  labelOrder = data.label_order || ['left', 'rest', 'right'];
+  currentTask = taskKey || 'custom';
+
+  document.getElementById('sourceBadge').textContent = 'Source: ' + (sourceName || 'Dataset');
+  document.getElementById('scrubber').max = Math.max(0, records.length - 1);
+  
+  buildProbabilityBars();
+  initRobot();
+  computeSessionAnalytics();
+  
+  currentIdx = 0;
+  renderFrame(0);
+  resizeWaveCanvas();
+  
+  if (taskKey === 'fists_feet') {
+    setRobotView('all');
+  } else {
+    setRobotView('arms');
+  }
+}
+
+function buildProbabilityBars() {
+  const container = document.getElementById('probBarsContainer');
+  container.innerHTML = labelOrder.map((lbl, idx) => {
+    const c = colorFor(lbl, idx);
+    return `
+      <div class="prob-row">
+        <div class="prob-label">${displayName(lbl)}</div>
+        <div class="prob-track">
+          <div class="prob-fill" id="bar-${lbl}" style="background:linear-gradient(90deg, ${c}66, ${c}); width:0%;"></div>
+        </div>
+        <div class="prob-val mono" id="val-${lbl}">0%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function togglePlay() {
+  playing ? pause() : play();
+}
+
+function play() {
+  if (records.length === 0) return;
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸';
+  const speed = parseInt(document.getElementById('speedSelect').value) || 250;
+  clearInterval(playTimer);
+  playTimer = setInterval(() => {
+    if (currentIdx >= records.length - 1) {
+      pause();
+      return;
+    }
+    step(1);
+  }, speed);
+}
+
+function pause() {
+  playing = false;
+  document.getElementById('playBtn').textContent = '▶';
+  clearInterval(playTimer);
+}
+
+function step(delta) {
+  currentIdx = Math.max(0, Math.min(records.length - 1, currentIdx + delta));
+  renderFrame(currentIdx);
+}
+
+document.getElementById('scrubber').addEventListener('input', e => {
+  pause();
+  currentIdx = parseInt(e.target.value);
+  renderFrame(currentIdx);
+});
+
+document.getElementById('speedSelect').addEventListener('change', () => {
+  if (playing) {
+    pause();
+    play();
+  }
+});
+
+/* ================================================================
+   RENDER ACTIVE FRAME TELEMETRY
+   ================================================================ */
+function renderFrame(idx) {
+  const r = records[idx];
+  if (!r) return;
+
+  document.getElementById('scrubber').value = idx;
+  document.getElementById('playbackProgress').textContent = `${idx + 1} / ${records.length}`;
+  document.getElementById('cmdTimeText').textContent = `t = ${r.t.toFixed(3)}s`;
+
+  // Hero readout
+  const heroVal = document.getElementById('cmdHeroValue');
+  const confText = document.getElementById('cmdConfidenceText');
+  const trueText = document.getElementById('cmdTrueClassText');
+  const matchStatus = document.getElementById('cmdMatchStatus');
+
+  heroVal.textContent = displayName(r.predicted_class).toUpperCase();
+  heroVal.style.color = colorFor(r.predicted_class, labelOrder.indexOf(r.predicted_class));
+
+  const topProb = r.probs[r.predicted_class] || 0;
+  confText.textContent = `Confidence: ${(topProb * 100).toFixed(1)}%`;
+  trueText.textContent = `Ground Truth: ${displayName(r.true_class)}`;
+
+  if (r.true_class == null) {
+    matchStatus.textContent = 'NO GROUND TRUTH';
+    matchStatus.className = 'match-pill';
+  } else if (r.predicted_class === r.true_class) {
+    matchStatus.textContent = 'MATCH';
+    matchStatus.className = 'match-pill match';
+  } else {
+    matchStatus.textContent = 'MISS';
+    matchStatus.className = 'match-pill miss';
+  }
+
+  // Update Softmax probability bars
+  let maxP = 0, topClass = labelOrder[0];
+  labelOrder.forEach(lbl => {
+    const p = r.probs[lbl] || 0;
+    if (p > maxP) { maxP = p; topClass = lbl; }
+  });
+
+  labelOrder.forEach(lbl => {
+    const p = (r.probs[lbl] || 0);
+    const pct = (p * 100).toFixed(0) + '%';
+    const barEl = document.getElementById(`bar-${lbl}`);
+    const valEl = document.getElementById(`val-${lbl}`);
+    if (barEl) {
+      barEl.style.width = pct;
+      valEl.textContent = pct;
+      valEl.className = 'prob-val mono' + (lbl === topClass ? ' top' : '');
+    }
+  });
+
+  drawWaveform(r.waveform);
+  setRobotPose(r.predicted_class);
+
+  // If Inspector tab is open, update single channel
+  if (activeTab === 'inspector') {
+    drawSingleChannelTrace();
+    updateChannelBands(r);
+  }
+}
+
+/* ================================================================
+   WAVEFORM OSCILLOSCOPE CANVAS
+   ================================================================ */
+function drawWaveform(channels) {
+  if (!channels || !channels.length) return;
+  const canvas = document.getElementById('waveCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width / dpr, h = canvas.height / dpr;   // logical size (the context is scaled by dpr)
+  ctx.clearRect(0, 0, w, h);
+
+  const n = channels.length;
+  const pad = 24;
+  const slot = (h - pad * 2) / n;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 60; x < w; x += 90) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+
+  channels.forEach((trace, i) => {
+    const yMid = pad + slot * (i + 0.5);
+    const color = PALETTE[i % PALETTE.length];
+
+    // Center Baseline
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath(); ctx.moveTo(56, yMid); ctx.lineTo(w, yMid); ctx.stroke();
+
+    // Channel Tag
+    ctx.fillStyle = '#7f8ea3';
+    ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'left';
+    const chName = (logData && logData.channel_names && logData.channel_names[i]) || ('Ch ' + (i + 1));
+    ctx.fillText(chName, 12, yMid + 3.5);
+
+    // Glowing trace
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    trace.forEach((v, s) => {
+      const x = 58 + (s / (trace.length - 1)) * (w - 68);
+      const y = yMid - v * (slot * 0.42);
+      s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function resizeWaveCanvas() {
+  const canvas = document.getElementById('waveCanvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * (window.devicePixelRatio || 1);
+  canvas.height = 220 * (window.devicePixelRatio || 1);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  if (records[currentIdx]) drawWaveform(records[currentIdx].waveform);
+}
+window.addEventListener('resize', resizeWaveCanvas);
+
+/* ================================================================
+   PROJECT ARCHIVE DOWNLOAD HELPER
+   ================================================================ */
+function downloadProjectZip() {
+  window.location.href = `${API_BASE}/api/download/project-zip`;
+}
+
+/* ================================================================
+   3D FULL HUMANOID ROBOT & BIONIC FINGER MOTION (THREE.JS)
+   ================================================================ */
+let robotScene, robotCamera, robotRenderer, robotGroup;
+let limbs = {};
+let limbTargets = {};
+let robotInited = false;
+let glowMaterials = [];
+
+// Studio Camera Target & Orbit State
+let cameraTarget = { pos: new THREE.Vector3(0, 0.25, 5.2), look: new THREE.Vector3(0, 0.20, 0) };
+let currentLook = new THREE.Vector3(0, 0.20, 0);
+let activeView = 'all';
+
+let isDragging = false;
+let prevMousePos = { x: 0, y: 0 };
+let orbitRotation = { yaw: 0, pitch: 0 };
+
+// Interactive Finger Motion Lab State
+let fingerLabActive = false;
+let manualFingerControl = false;
+let fingerWaveActive = false;
+let fingerTargetHand = 'both'; // 'left', 'right', 'both'
+
+let fingerAngles = {
+  thumb: 0,
+  index: 0,
+  middle: 0,
+  ring: 0,
+  pinky: 0
+};
+
+function initRobot() {
+  const container = document.getElementById('robotStage');
+  if (!container || robotInited) return;
+  robotInited = true;
+
+  robotScene = new THREE.Scene();
+  robotCamera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+  robotCamera.position.copy(cameraTarget.pos);
+  robotCamera.lookAt(currentLook);
+
+  robotRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  robotRenderer.setSize(container.clientWidth, container.clientHeight);
+  robotRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  robotRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  robotRenderer.toneMappingExposure = 1.85; // Brilliant high-visibility studio exposure
+  container.appendChild(robotRenderer.domElement);
+
+  setupOrbitControls(container);
+
+  // ==================== HIGH-TECH LABORATORY STUDIO LIGHTING ====================
+  // Clean neutral ambient illumination (eliminates murky dark shadows)
+  const ambientLight = new THREE.AmbientLight(0x506880, 1.15);
+  robotScene.add(ambientLight);
+
+  // Primary overhead studio key light (crisp specular gleams on polished metal)
+  const keyLight = new THREE.DirectionalLight(0xFFFFFF, 2.4);
+  keyLight.position.set(4, 9, 6);
+  robotScene.add(keyLight);
+
+  // Soft front-left laboratory fill light
+  const fillLight = new THREE.DirectionalLight(0xD8EEF8, 1.6);
+  fillLight.position.set(-6, 3, 5);
+  robotScene.add(fillLight);
+
+  // Ground upward bounce light (brightens under-arms, fingers, and lower torso)
+  const groundBounce = new THREE.DirectionalLight(0x8AB4D4, 1.2);
+  groundBounce.position.set(0, -4, 4);
+  robotScene.add(groundBounce);
+
+  // Left cyan silhouette rim spotlight
+  const rimCyan = new THREE.PointLight(0x00F5D4, 2.2, 18);
+  rimCyan.position.set(-4.5, 3, -2.5);
+  robotScene.add(rimCyan);
+
+  // Right neural blue silhouette rim spotlight
+  const rimBlue = new THREE.PointLight(0x3A86FF, 2.2, 18);
+  rimBlue.position.set(4.5, 3, -2.5);
+  robotScene.add(rimBlue);
+
+  // Warm overhead test bay rim
+  const topRim = new THREE.PointLight(0xE0F0FF, 1.4, 12);
+  topRim.position.set(0, 6, -1);
+  robotScene.add(topRim);
+
+  // ==================== HIGH-CONTRAST ROBOTIC MATERIALS ====================
+  const matChrome = new THREE.MeshStandardMaterial({
+    color: 0xF8FAFD, metalness: 0.98, roughness: 0.08
+  });
+  const matWhiteChassis = new THREE.MeshStandardMaterial({
+    color: 0xE6EEF5, metalness: 0.82, roughness: 0.16
+  });
+  const matTitanium = new THREE.MeshStandardMaterial({
+    color: 0x8298B0, metalness: 0.88, roughness: 0.22
+  });
+  const matDarkArmor = new THREE.MeshStandardMaterial({
+    color: 0x1E2B3D, metalness: 0.78, roughness: 0.35
+  });
+  const matGoldServo = new THREE.MeshStandardMaterial({
+    color: 0xF5C542, metalness: 0.96, roughness: 0.14
+  });
+  const matCyanGlow = new THREE.MeshStandardMaterial({
+    color: 0x00F5D4, emissive: 0x00F5D4, emissiveIntensity: 1.8, metalness: 0.1, roughness: 0.2
+  });
+  const matReactorCore = new THREE.MeshStandardMaterial({
+    color: 0x00E5FF, emissive: 0x00E5FF, emissiveIntensity: 2.4, metalness: 0.2, roughness: 0.1
+  });
+  const matVisorGlow = new THREE.MeshStandardMaterial({
+    color: 0x00F5D4, emissive: 0x00F5D4, emissiveIntensity: 2.1, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.95
+  });
+
+  glowMaterials.push(matCyanGlow, matReactorCore, matVisorGlow);
+
+  robotGroup = new THREE.Group();
+  robotScene.add(robotGroup);
+
+  // ==================== FULL HUMANOID CHASSIS BUILDER ====================
+  buildHumanoidTorso(matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow, matReactorCore);
+  buildHumanoidHead(matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matVisorGlow, matCyanGlow);
+  buildHumanoidPelvis(matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow);
+
+  // Full Articulated Metallic Arms (with 3-phalanx bionic fingers)
+  buildMetallicArm('left', -1, matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow);
+  buildMetallicArm('right', 1, matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow);
+
+  // Full Articulated Bionic Legs
+  buildMetallicLeg('left', -1, matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow);
+  buildMetallicLeg('right', 1, matChrome, matWhiteChassis, matTitanium, matDarkArmor, matGoldServo, matCyanGlow);
+
+  // Laboratory Floor Stage with Holographic Dais
+  const gridHelper = new THREE.GridHelper(12, 24, 0x00F5D4, 0x1A2C40);
+  gridHelper.position.y = -2.7;
+  robotScene.add(gridHelper);
+
+  // Concentric Illuminated Dais Rings
+  const ring1 = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.84, 48), new THREE.MeshBasicMaterial({ color: 0x00F5D4, side: THREE.DoubleSide }));
+  ring1.rotation.x = Math.PI / 2;
+  ring1.position.y = -2.69;
+  robotScene.add(ring1);
+
+  const ring2 = new THREE.Mesh(new THREE.RingGeometry(1.6, 1.63, 64), new THREE.MeshBasicMaterial({ color: 0x3A86FF, side: THREE.DoubleSide, transparent: true, opacity: 0.6 }));
+  ring2.rotation.x = Math.PI / 2;
+  ring2.position.y = -2.69;
+  robotScene.add(ring2);
+
+  resetRobotTargets();
+  window.addEventListener('resize', resizeRobot);
+  resizeRobot();
+  animateRobot();
+}
+
+/* ---- HUMANOID TORSO & CHEST CHASSIS ---- */
+function buildHumanoidTorso(matChrome, matWhite, matTitanium, matArmor, matGold, matGlow, matReactor) {
+  const torsoGroup = new THREE.Group();
+  torsoGroup.position.set(0, 0.25, 0);
+  robotGroup.add(torsoGroup);
+  limbs.torso = torsoGroup;
+
+  // Chest Armor Breastplate (Upper Pectorals)
+  const chestPlateL = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.55, 0.28), matWhite);
+  chestPlateL.position.set(-0.42, 0.52, 0.08);
+  chestPlateL.rotation.z = -0.06;
+  torsoGroup.add(chestPlateL);
+
+  const chestPlateR = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.55, 0.28), matWhite);
+  chestPlateR.position.set(0.42, 0.52, 0.08);
+  chestPlateR.rotation.z = 0.06;
+  torsoGroup.add(chestPlateR);
+
+  // Clavicle Yoke Collar (Connects Neck into Shoulders)
+  const collarYoke = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.16, 0.36), matTitanium);
+  collarYoke.position.set(0, 0.88, -0.02);
+  torsoGroup.add(collarYoke);
+
+  const collarStrip = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.03, 0.38), matGlow);
+  collarStrip.position.set(0, 0.88, 0.02);
+  torsoGroup.add(collarStrip);
+
+  // Central Arc Reactor / Neural Core
+  const reactorRing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.045, 12, 32), matGold);
+  reactorRing.position.set(0, 0.50, 0.22);
+  torsoGroup.add(reactorRing);
+
+  const reactorCore = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 24), matReactor);
+  reactorCore.rotation.x = Math.PI / 2;
+  reactorCore.position.set(0, 0.50, 0.20);
+  torsoGroup.add(reactorCore);
+
+  const reactorLight = new THREE.PointLight(0x00F5D4, 1.8, 4.5);
+  reactorLight.position.set(0, 0.50, 0.35);
+  torsoGroup.add(reactorLight);
+  limbs.reactorCore = reactorCore;
+
+  // Segmented Articulating Spine (Vertebrae Column)
+  const spineGroup = new THREE.Group();
+  torsoGroup.add(spineGroup);
+  for (let i = 0; i < 4; i++) {
+    const vert = new THREE.Mesh(new THREE.BoxGeometry(0.38 - i * 0.02, 0.14, 0.26), matArmor);
+    vert.position.set(0, 0.15 - i * 0.18, -0.04);
+    spineGroup.add(vert);
+
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 16), matGold);
+    disc.position.set(0, 0.08 - i * 0.18, -0.04);
+    spineGroup.add(disc);
+  }
+
+  // Lateral Rib Hydraulic Rams (Connecting Chest to Core)
+  [-0.62, 0.62].forEach((x, idx) => {
+    const ramCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.55, 14), matTitanium);
+    ramCyl.position.set(x, 0.15, 0.06);
+    ramCyl.rotation.z = (idx === 0 ? 1 : -1) * 0.18;
+    torsoGroup.add(ramCyl);
+
+    const ramRod = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.5, 14), matChrome);
+    ramRod.position.set(x, -0.1, 0.06);
+    ramRod.rotation.z = (idx === 0 ? 1 : -1) * 0.18;
+    torsoGroup.add(ramRod);
+  });
+
+  // Lower Abdominal Armor Plate
+  const abPlate = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.36, 0.24), matWhite);
+  abPlate.position.set(0, -0.22, 0.06);
+  torsoGroup.add(abPlate);
+
+  const abGlow = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.32, 0.25), matGlow);
+  abGlow.position.set(0, -0.22, 0.06);
+  torsoGroup.add(abGlow);
+}
+
+/* ---- HUMANOID HEAD & OPTICAL VISOR ARRAY ---- */
+function buildHumanoidHead(matChrome, matWhite, matTitanium, matArmor, matGold, matVisor, matGlow) {
+  const neckGroup = new THREE.Group();
+  neckGroup.position.set(0, 1.25, 0);
+  robotGroup.add(neckGroup);
+  limbs.neck = neckGroup;
+
+  // Cervical Neck Gimbal & Hydraulic Actuators
+  const neckPivot = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), matChrome);
+  neckGroup.add(neckPivot);
+
+  const neckPistonL = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 12), matGold);
+  neckPistonL.position.set(-0.12, 0.1, -0.05);
+  neckGroup.add(neckPistonL);
+
+  const neckPistonR = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 12), matGold);
+  neckPistonR.position.set(0.12, 0.1, -0.05);
+  neckGroup.add(neckPistonR);
+
+  // Cranial Shell Head Group
+  const headGroup = new THREE.Group();
+  headGroup.position.set(0, 0.32, 0.04);
+  neckGroup.add(headGroup);
+  limbs.head = headGroup;
+
+  // Angular Cranial Helmet Shell
+  const cranium = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.50, 0.56), matWhite);
+  cranium.position.set(0, 0.06, 0);
+  headGroup.add(cranium);
+
+  // Crown Crest Top
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.60), matArmor);
+  crown.position.set(0, 0.33, 0);
+  headGroup.add(crown);
+
+  const crownGlow = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.54), matGlow);
+  crownGlow.position.set(0, 0.38, 0);
+  headGroup.add(crownGlow);
+
+  // Glowing Panoramic Optical Visor
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.14, 0.16), matVisor);
+  visor.position.set(0, 0.08, 0.26);
+  headGroup.add(visor);
+
+  const visorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.18, 0.08), matTitanium);
+  visorFrame.position.set(0, 0.08, 0.24);
+  headGroup.add(visorFrame);
+
+  // Angular Jaw Mandible & Sensor Slits
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.44), matTitanium);
+  jaw.position.set(0, -0.16, 0.06);
+  headGroup.add(jaw);
+
+  const chin = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.12, 0.12), matArmor);
+  chin.position.set(0, -0.22, 0.24);
+  headGroup.add(chin);
+
+  // Side Audio/Telemetry Sensor Nodes
+  [-0.28, 0.28].forEach(x => {
+    const earNode = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 16), matGold);
+    earNode.rotation.z = Math.PI / 2;
+    earNode.position.set(x, 0.05, 0);
+    headGroup.add(earNode);
+
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.35, 8), matChrome);
+    antenna.position.set(x, 0.25, -0.12);
+    antenna.rotation.x = -0.25;
+    headGroup.add(antenna);
+
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), matGlow);
+    tip.position.set(x, 0.42, -0.16);
+    headGroup.add(tip);
+  });
+}
+
+/* ---- HUMANOID PELVIS & HIP CHASSIS ---- */
+function buildHumanoidPelvis(matChrome, matWhite, matTitanium, matArmor, matGold, matGlow) {
+  const pelvisGroup = new THREE.Group();
+  pelvisGroup.position.set(0, -0.42, 0);
+  robotGroup.add(pelvisGroup);
+  limbs.pelvis = pelvisGroup;
+
+  // Pelvic Saddle Chassis
+  const saddle = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.36, 0.42), matArmor);
+  pelvisGroup.add(saddle);
+
+  const groinArmor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.28), matWhite);
+  groinArmor.position.set(0, -0.06, 0.12);
+  pelvisGroup.add(groinArmor);
+
+  const groinGlow = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.32, 0.29), matGlow);
+  groinGlow.position.set(0, -0.06, 0.12);
+  pelvisGroup.add(groinGlow);
+
+  // Hip Sockets linking to Leg mounts
+  [-0.55, 0.55].forEach(x => {
+    const hipBearing = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.05, 10, 24), matGold);
+    hipBearing.rotation.y = Math.PI / 2;
+    hipBearing.position.set(x, -0.12, 0);
+    pelvisGroup.add(hipBearing);
+  });
+}
+
+/* ---- ARTICULATED METALLIC ARM WITH 3-PHALANX FINGERS ---- */
+function buildMetallicArm(side, dir, matChrome, matWhite, matTitanium, matArmor, matGold, matGlow) {
+  const armGroup = new THREE.Group();
+  armGroup.position.set(dir * 1.35, 1.15, -0.05);
+  robotGroup.add(armGroup);
+
+  // Shoulder Gimbal & Rotary Hub
+  const shoulderHub = new THREE.Mesh(new THREE.SphereGeometry(0.24, 18, 14), matChrome);
+  armGroup.add(shoulderHub);
+
+  const shoulderRing = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.05, 10, 24), matGold);
+  shoulderRing.rotation.y = Math.PI / 2;
+  armGroup.add(shoulderRing);
+
+  // Upper Arm Assembly
+  const upperArmGroup = new THREE.Group();
+  armGroup.add(upperArmGroup);
+
+  // Dual Aerospace Spars
+  const spar1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 0.16), matWhite);
+  spar1.position.set(-0.08, -0.52, 0);
+  upperArmGroup.add(spar1);
+
+  const spar2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 0.16), matWhite);
+  spar2.position.set(0.08, -0.52, 0);
+  upperArmGroup.add(spar2);
+
+  // Center Hydraulic Ram
+  const pistonCylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 16), matArmor);
+  pistonCylinder.position.set(0, -0.4, 0.08);
+  upperArmGroup.add(pistonCylinder);
+
+  const pistonRod = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.45, 16), matChrome);
+  pistonRod.position.set(0, -0.65, 0.08);
+  upperArmGroup.add(pistonRod);
+
+  // Glowing energy conduit line
+  const armGlow = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.75, 0.03), matGlow);
+  armGlow.position.set(dir * 0.16, -0.52, 0);
+  upperArmGroup.add(armGlow);
+
+  // Elbow Joint
+  const elbowGroup = new THREE.Group();
+  elbowGroup.position.set(0, -1.02, 0);
+  upperArmGroup.add(elbowGroup);
+
+  const elbowPivot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.3, 18), matChrome);
+  elbowPivot.rotation.z = Math.PI / 2;
+  elbowGroup.add(elbowPivot);
+
+  const elbowCap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), matGold);
+  elbowCap.position.set(dir * 0.18, 0, 0);
+  elbowGroup.add(elbowCap);
+
+  // Forearm
+  const forearmGroup = new THREE.Group();
+  elbowGroup.add(forearmGroup);
+
+  const forearmArmor = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.85, 0.26), matWhite);
+  forearmArmor.position.set(0, -0.48, 0);
+  forearmGroup.add(forearmArmor);
+
+  const forearmShell = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.55, 0.12), matArmor);
+  forearmShell.position.set(0, -0.42, 0.11);
+  forearmGroup.add(forearmShell);
+
+  const ledMeter = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.03), matGlow);
+  ledMeter.position.set(0, -0.42, 0.18);
+  forearmGroup.add(ledMeter);
+
+  // Wrist Gimbal
+  const wristGroup = new THREE.Group();
+  wristGroup.position.set(0, -0.96, 0);
+  forearmGroup.add(wristGroup);
+
+  const wristGimbal = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 10, 20), matGold);
+  wristGimbal.rotation.x = Math.PI / 2;
+  wristGroup.add(wristGimbal);
+
+  // Palm Core
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.16), matArmor);
+  palm.position.set(0, -0.16, 0);
+  wristGroup.add(palm);
+
+  const palmCore = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 16), matGlow);
+  palmCore.rotation.x = Math.PI / 2;
+  palmCore.position.set(0, -0.16, 0.09);
+  wristGroup.add(palmCore);
+
+  // ==================== 5 ARTICULATED 3-PHALANX DIGITS (the finger-BCI dataset decodes thumb, index, middle and pinky only) ====================
+  const fingerArray = [];
+  const fingerConfigs = [
+    { name: 'thumb',  x: dir * 0.19, y: -0.11, z: 0.06, len: 0.20, isThumb: true },
+    { name: 'index',  x: -0.10,      y: -0.29, z: 0.01, len: 0.27 },
+    { name: 'middle', x: -0.03,      y: -0.30, z: 0.01, len: 0.30 },
+    { name: 'ring',   x:  0.04,      y: -0.29, z: 0.01, len: 0.28 },
+    { name: 'pinky',  x:  0.11,      y: -0.27, z: 0.01, len: 0.23 },
+  ];
+
+  fingerConfigs.forEach(cfg => {
+    // Joint 1: Knuckle / Proximal Base Pivot
+    const knuckle = new THREE.Group();
+    knuckle.position.set(cfg.x, cfg.y, cfg.z);
+    wristGroup.add(knuckle);
+
+    const kBall = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), matGold);
+    knuckle.add(kBall);
+
+    // Phalanx 1: Proximal Segment
+    const seg1 = new THREE.Mesh(new THREE.BoxGeometry(0.055, cfg.len * 0.45, 0.055), matChrome);
+    seg1.position.set(0, -cfg.len * 0.22, 0);
+    knuckle.add(seg1);
+
+    // Joint 2: Intermediate Pivot (PIP joint)
+    const midJoint = new THREE.Group();
+    midJoint.position.set(0, -cfg.len * 0.45, 0);
+    knuckle.add(midJoint);
+
+    const midRing = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.02, 12), matGold);
+    midRing.rotation.z = Math.PI / 2;
+    midJoint.add(midRing);
+
+    // Phalanx 2: Intermediate Segment
+    const seg2 = new THREE.Mesh(new THREE.BoxGeometry(0.048, cfg.len * 0.35, 0.048), matTitanium);
+    seg2.position.set(0, -cfg.len * 0.17, 0);
+    midJoint.add(seg2);
+
+    // Joint 3: Distal Pivot (DIP joint)
+    const distJoint = new THREE.Group();
+    distJoint.position.set(0, -cfg.len * 0.35, 0);
+    midJoint.add(distJoint);
+
+    // Phalanx 3: Distal Fingertip Segment with Illuminated Contact Sensor Pad
+    const seg3 = new THREE.Mesh(new THREE.BoxGeometry(0.042, cfg.len * 0.22, 0.042), matChrome);
+    seg3.position.set(0, -cfg.len * 0.11, 0);
+    distJoint.add(seg3);
+
+    const tipGlow = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.045, 0.036), matGlow);
+    tipGlow.position.set(0, -cfg.len * 0.22, 0);
+    distJoint.add(tipGlow);
+
+    if (cfg.isThumb) {
+      knuckle.rotation.z = dir * 0.45;
+      knuckle.rotation.y = dir * 0.35;
+    }
+
+    fingerArray.push({
+      name: cfg.name,
+      base: knuckle,
+      mid: midJoint,
+      dist: distJoint,
+      isThumb: cfg.isThumb
+    });
+  });
+
+  limbs[side + 'Arm'] = armGroup;
+  limbs[side + 'Upper'] = upperArmGroup;
+  limbs[side + 'Elbow'] = elbowGroup;
+  limbs[side + 'Wrist'] = wristGroup;
+  limbs[side + 'Fingers'] = fingerArray;
+}
+
+/* ---- ARTICULATED METALLIC BIONIC LEG ---- */
+function buildMetallicLeg(side, dir, matChrome, matWhite, matTitanium, matArmor, matGold, matGlow) {
+  const legGroup = new THREE.Group();
+  legGroup.position.set(dir * 0.55, -0.65, 0);
+  robotGroup.add(legGroup);
+
+  // Hip Suspension Mount
+  const hipHub = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), matChrome);
+  legGroup.add(hipHub);
+
+  const hipRing = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.045, 10, 20), matGold);
+  hipRing.rotation.y = Math.PI / 2;
+  legGroup.add(hipRing);
+
+  // Thigh Assembly
+  const thighGroup = new THREE.Group();
+  legGroup.add(thighGroup);
+
+  const strutL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.95, 0.18), matWhite);
+  strutL.position.set(-0.09, -0.52, 0);
+  thighGroup.add(strutL);
+
+  const strutR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.95, 0.18), matWhite);
+  strutR.position.set(0.09, -0.52, 0);
+  thighGroup.add(strutR);
+
+  // Heavy Central Hydraulic Piston Ram
+  const thighPiston = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 16), matArmor);
+  thighPiston.position.set(0, -0.42, 0.09);
+  thighGroup.add(thighPiston);
+
+  const thighRod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 16), matChrome);
+  thighRod.position.set(0, -0.68, 0.09);
+  thighGroup.add(thighRod);
+
+  const thighGlow = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.8, 0.03), matGlow);
+  thighGlow.position.set(0, -0.52, -0.11);
+  thighGroup.add(thighGlow);
+
+  // Knee Joint
+  const kneeGroup = new THREE.Group();
+  kneeGroup.position.set(0, -1.05, 0);
+  thighGroup.add(kneeGroup);
+
+  const kneeHub = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.32, 20), matChrome);
+  kneeHub.rotation.z = Math.PI / 2;
+  kneeGroup.add(kneeHub);
+
+  const kneePlate = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.28, 0.14), matWhite);
+  kneePlate.position.set(0, 0, 0.16);
+  kneeGroup.add(kneePlate);
+
+  const kneeCapGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 16), matGlow);
+  kneeCapGlow.rotation.x = Math.PI / 2;
+  kneeCapGlow.position.set(0, 0, 0.24);
+  kneeGroup.add(kneeCapGlow);
+
+  // Lower Leg / Shin
+  const shinGroup = new THREE.Group();
+  kneeGroup.add(shinGroup);
+
+  const shinCore = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.95, 0.24), matTitanium);
+  shinCore.position.set(0, -0.55, 0);
+  shinGroup.add(shinCore);
+
+  const calfCanister = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.5, 14), matChrome);
+  calfCanister.position.set(0, -0.52, -0.14);
+  shinGroup.add(calfCanister);
+
+  // Ankle Joint
+  const ankleGroup = new THREE.Group();
+  ankleGroup.position.set(0, -1.1, 0);
+  shinGroup.add(ankleGroup);
+
+  const ankleBall = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), matGold);
+  ankleGroup.add(ankleBall);
+
+  // Bionic Foot Assembly
+  const footGroup = new THREE.Group();
+  footGroup.position.set(0, -0.06, 0.08);
+  ankleGroup.add(footGroup);
+
+  const heel = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.52), matTitanium);
+  heel.position.set(0, -0.08, 0.04);
+  footGroup.add(heel);
+
+  const solePlate = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.04, 0.56), matArmor);
+  solePlate.position.set(0, -0.15, 0.04);
+  footGroup.add(solePlate);
+
+  for (let i = -1; i <= 1; i++) {
+    const toe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.09, 0.18), matChrome);
+    toe.position.set(i * 0.09, -0.09, 0.36);
+    footGroup.add(toe);
+  }
+
+  const soleGlow = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.44), matGlow);
+  soleGlow.position.set(0, -0.17, 0.04);
+  footGroup.add(soleGlow);
+
+  limbs[side + 'Leg'] = legGroup;
+  limbs[side + 'Thigh'] = thighGroup;
+  limbs[side + 'Knee'] = kneeGroup;
+  limbs[side + 'Ankle'] = ankleGroup;
+  limbs[side + 'Foot'] = footGroup;
+}
+
+/* ================================================================
+   ROBOT POSE TARGET KINEMATICS
+   ================================================================ */
+function resetRobotTargets() {
+  limbTargets = {
+    head:      { rotX: 0, rotY: 0, rotZ: 0 },
+    torso:     { rotX: 0, rotY: 0, rotZ: 0 },
+    leftArm:   { rotX: 0, rotY: 0, rotZ: 0.1 },
+    leftElbow: { rotX: -0.2 },
+    leftWrist: { rotX: 0, rotZ: 0 },
+    leftFistCurl: 0,
+    rightArm:   { rotX: 0, rotY: 0, rotZ: -0.1 },
+    rightElbow: { rotX: -0.2 },
+    rightWrist: { rotX: 0, rotZ: 0 },
+    rightFistCurl: 0,
+    leftLeg:   { rotX: 0 },
+    leftKnee:  { rotX: 0.05 },
+    leftAnkle: { rotX: 0 },
+    rightLeg:   { rotX: 0 },
+    rightKnee:  { rotX: 0.05 },
+    rightAnkle: { rotX: 0 },
+    glowIntensity: 1.0
+  };
+}
+
+function setRobotPose(command) {
+  if (!robotInited) return;
+  const tag = document.getElementById('activeLimbTag');
+  const specTag = document.getElementById('robotSpecTag');
+  const badge = document.getElementById('activePoseBadge');
+
+  if (tag) tag.textContent = displayName(command).toUpperCase();
+  if (badge) badge.textContent = displayName(command).toUpperCase();
+
+  resetRobotTargets();
+
+  switch (command) {
+    case 'left':
+      if (specTag) specTag.textContent = 'LEFT METALLIC ARM ENGAGED · CLENCHING POWER FIST';
+      limbTargets.leftArm = { rotX: -1.05, rotY: 0.25, rotZ: 0.35 };
+      limbTargets.leftElbow = { rotX: -0.95 };
+      limbTargets.leftWrist = { rotX: 0.25, rotZ: 0.5 };
+      limbTargets.leftFistCurl = 1.0;
+      limbTargets.head = { rotX: 0.05, rotY: 0.18, rotZ: 0.04 };
+      limbTargets.torso = { rotX: 0.02, rotY: 0.15, rotZ: 0 };
+      limbTargets.glowIntensity = 2.0;
+      break;
+
+    case 'right':
+      if (specTag) specTag.textContent = 'RIGHT METALLIC ARM ENGAGED · CLENCHING POWER FIST';
+      limbTargets.rightArm = { rotX: -1.05, rotY: -0.25, rotZ: -0.35 };
+      limbTargets.rightElbow = { rotX: -0.95 };
+      limbTargets.rightWrist = { rotX: 0.25, rotZ: -0.5 };
+      limbTargets.rightFistCurl = 1.0;
+      limbTargets.head = { rotX: 0.05, rotY: -0.18, rotZ: -0.04 };
+      limbTargets.torso = { rotX: 0.02, rotY: -0.15, rotZ: 0 };
+      limbTargets.glowIntensity = 2.0;
+      break;
+
+    case 'both_fists':
+      if (specTag) specTag.textContent = 'DUAL HYDRAULIC ARM STRIKE · TWIN POWER FISTS';
+      limbTargets.leftArm = { rotX: -1.15, rotY: 0.2, rotZ: 0.3 };
+      limbTargets.leftElbow = { rotX: -1.0 };
+      limbTargets.leftWrist = { rotX: 0.2, rotZ: 0.4 };
+      limbTargets.leftFistCurl = 1.0;
+      limbTargets.rightArm = { rotX: -1.15, rotY: -0.2, rotZ: -0.3 };
+      limbTargets.rightElbow = { rotX: -1.0 };
+      limbTargets.rightWrist = { rotX: 0.2, rotZ: -0.4 };
+      limbTargets.rightFistCurl = 1.0;
+      limbTargets.head = { rotX: 0.12, rotY: 0, rotZ: 0 };
+      limbTargets.torso = { rotX: 0.08, rotY: 0, rotZ: 0 };
+      limbTargets.glowIntensity = 2.4;
+      break;
+
+    case 'both_feet':
+      if (specTag) specTag.textContent = 'BIONIC LEGS HYDRAULIC EXTENSION · SOLE THRUSTERS';
+      limbTargets.leftLeg = { rotX: -0.45 };
+      limbTargets.leftKnee = { rotX: 0.65 };
+      limbTargets.leftAnkle = { rotX: -0.25 };
+      limbTargets.rightLeg = { rotX: -0.45 };
+      limbTargets.rightKnee = { rotX: 0.65 };
+      limbTargets.rightAnkle = { rotX: -0.25 };
+      limbTargets.head = { rotX: 0.15, rotY: 0, rotZ: 0 };
+      limbTargets.torso = { rotX: -0.05, rotY: 0, rotZ: 0 };
+      limbTargets.glowIntensity = 2.2;
+      break;
+
+    case 'rest':
+    default:
+      if (specTag) specTag.textContent = 'FULL HUMANOID CHASSIS: TORSO REACTOR · 5 ARTICULATED DIGITS (FINGER-BCI CLASSES: THUMB, INDEX, MIDDLE, PINKY)';
+      break;
+  }
+}
+
+/* ================================================================
+   CAMERA VIEWS
+   ================================================================ */
+function setRobotView(mode) {
+  activeView = mode;
+  ['Arms', 'Legs', 'All'].forEach(v => {
+    const btn = document.getElementById('viewBtn' + v);
+    if (btn) btn.classList.toggle('active', (v === 'All' ? 'all' : v.toLowerCase()) === mode);
+  });
+
+  if (mode === 'arms') {
+    cameraTarget.pos.set(0, 0.45, 4.2);
+    cameraTarget.look.set(0, 0.40, 0);
+  } else if (mode === 'legs') {
+    cameraTarget.pos.set(0, -1.35, 4.4);
+    cameraTarget.look.set(0, -1.40, 0);
+  } else {
+    // 'all' Full Humanoid Body Centered View
+    cameraTarget.pos.set(0, 0.15, 5.8);
+    cameraTarget.look.set(0, 0.15, 0);
+  }
+  orbitRotation.yaw = 0;
+  orbitRotation.pitch = 0;
+}
+
+function resetRobotCamera() {
+  setRobotView(activeView);
+}
+
+function setupOrbitControls(container) {
+  container.addEventListener('pointerdown', e => {
+    isDragging = true;
+    prevMousePos.x = e.clientX;
+    prevMousePos.y = e.clientY;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - prevMousePos.x;
+    const dy = e.clientY - prevMousePos.y;
+    prevMousePos.x = e.clientX;
+    prevMousePos.y = e.clientY;
+    orbitRotation.yaw += dx * 0.006;
+    orbitRotation.pitch = Math.max(-0.6, Math.min(0.6, orbitRotation.pitch + dy * 0.006));
+  });
+  window.addEventListener('pointerup', () => { isDragging = false; });
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    const zoomDelta = e.deltaY * 0.003;
+    cameraTarget.pos.z = Math.max(2.5, Math.min(9.5, cameraTarget.pos.z + zoomDelta));
+  }, { passive: false });
+}
+
+/* ================================================================
+   INTERACTIVE FINGER MOTION TESTING LAB CONTROLLERS
+   ================================================================ */
+function toggleFingerLab() {
+  const panel = document.getElementById('fingerLabPanel');
+  const btn = document.getElementById('btnToggleFingerLab');
+  fingerLabActive = !fingerLabActive;
+  panel.style.display = fingerLabActive ? 'flex' : 'none';
+  btn.classList.toggle('active', fingerLabActive);
+  if (fingerLabActive && !manualFingerControl) {
+    applyFingerPreset('fist');
+  }
+}
+
+function setFingerTargetHand(hand) {
+  fingerTargetHand = hand;
+  ['both', 'left', 'right'].forEach(h => {
+    const el = document.getElementById('btnHand' + h.charAt(0).toUpperCase() + h.slice(1));
+    if (el) el.classList.toggle('active', h === hand);
+  });
+}
+
+function onMasterGripSlider(val) {
+  manualFingerControl = true;
+  fingerWaveActive = false;
+  document.getElementById('lblGripMaster').textContent = val + '%';
+  const pct = parseInt(val) / 100;
+  ['thumb', 'index', 'middle', 'ring', 'pinky'].forEach(f => {
+    fingerAngles[f] = pct;
+    const s = document.getElementById('sliderGrip' + f.charAt(0).toUpperCase() + f.slice(1));
+    const l = document.getElementById('lblGrip' + f.charAt(0).toUpperCase() + f.slice(1));
+    if (s) s.value = val;
+    if (l) l.textContent = val + '%';
+  });
+  updateFingerTelemetry();
+}
+
+function onSingleFingerSlider(finger, val) {
+  manualFingerControl = true;
+  fingerWaveActive = false;
+  document.getElementById('lblGrip' + finger.charAt(0).toUpperCase() + finger.slice(1)).textContent = val + '%';
+  fingerAngles[finger] = parseInt(val) / 100;
+  updateFingerTelemetry();
+}
+
+function applyFingerPreset(name) {
+  ['fist', 'open', 'point', 'peace', 'pinch', 'wave', 'neural'].forEach(p => {
+    const el = document.getElementById('btnPreset' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.classList.toggle('active', p === name);
+  });
+
+  if (name === 'neural') {
+    manualFingerControl = false;
+    fingerWaveActive = false;
+    document.getElementById('fingerAngleTelemetry').textContent = 'BCI mode: whole-hand fist from the decoded limb command (individual fingers are not decoded here)';
+    return;
+  }
+
+  manualFingerControl = true;
+  fingerWaveActive = false;
+
+  const presets = {
+    fist:   { thumb: 1.0, index: 1.0, middle: 1.0, ring: 1.0, pinky: 1.0 },
+    open:   { thumb: 0.0, index: 0.0, middle: 0.0, ring: 0.0, pinky: 0.0 },
+    point:  { thumb: 0.9, index: 0.0, middle: 1.0, ring: 1.0, pinky: 1.0 },
+    peace:  { thumb: 0.9, index: 0.0, middle: 0.0, ring: 1.0, pinky: 1.0 },
+    pinch:  { thumb: 0.8, index: 0.75, middle: 0.1, ring: 0.1, pinky: 0.1 }
+  };
+
+  const p = presets[name];
+  if (p) {
+    Object.keys(p).forEach(f => {
+      fingerAngles[f] = p[f];
+      const val = Math.round(p[f] * 100);
+      const s = document.getElementById('sliderGrip' + f.charAt(0).toUpperCase() + f.slice(1));
+      const l = document.getElementById('lblGrip' + f.charAt(0).toUpperCase() + f.slice(1));
+      if (s) s.value = val;
+      if (l) l.textContent = val + '%';
+    });
+    updateFingerTelemetry();
+  }
+}
+
+function toggleFingerWave() {
+  fingerWaveActive = !fingerWaveActive;
+  manualFingerControl = fingerWaveActive;
+  const btn = document.getElementById('btnPresetWave');
+  if (btn) btn.classList.toggle('active', fingerWaveActive);
+  if (fingerWaveActive) {
+    document.getElementById('fingerAngleTelemetry').textContent = 'Auto Wave Active · Sinusoidal Kinematics';
+  }
+}
+
+function updateFingerTelemetry() {
+  const avg = (fingerAngles.index + fingerAngles.middle + fingerAngles.ring + fingerAngles.pinky) / 4;
+  const knuckleDeg = Math.round(avg * 75);
+  const pipDeg = Math.round(avg * 85);
+  document.getElementById('fingerAngleTelemetry').textContent = `Knuckle Flexion: ${knuckleDeg}° | Inter-Phalanx: ${pipDeg}°`;
+}
+
+/* ================================================================
+   ROBOT ANIMATION LOOP
+   ================================================================ */
+function animateRobot() {
+  requestAnimationFrame(animateRobot);
+  if (!robotInited || !robotRenderer) return;
+
+  const sp = 0.12;
+  const orbitX = Math.sin(orbitRotation.yaw) * cameraTarget.pos.z;
+  const orbitZ = Math.cos(orbitRotation.yaw) * cameraTarget.pos.z;
+  const orbitY = cameraTarget.pos.y + Math.sin(orbitRotation.pitch) * 2;
+
+  robotCamera.position.x += (orbitX - robotCamera.position.x) * 0.08;
+  robotCamera.position.y += (orbitY - robotCamera.position.y) * 0.08;
+  robotCamera.position.z += (orbitZ - robotCamera.position.z) * 0.08;
+
+  currentLook.x += (cameraTarget.look.x - currentLook.x) * 0.08;
+  currentLook.y += (cameraTarget.look.y - currentLook.y) * 0.08;
+  currentLook.z += (cameraTarget.look.z - currentLook.z) * 0.08;
+  robotCamera.lookAt(currentLook);
+
+  // Torso Torsion & Flexion
+  const torso = limbs.torso;
+  const tTorso = limbTargets.torso;
+  if (torso && tTorso) {
+    torso.rotation.x += (tTorso.rotX - torso.rotation.x) * sp;
+    torso.rotation.y += (tTorso.rotY - torso.rotation.y) * sp;
+    torso.rotation.z += (tTorso.rotZ - torso.rotation.z) * sp;
+  }
+
+  // Head Tracking
+  const head = limbs.head;
+  const tHead = limbTargets.head;
+  if (head && tHead) {
+    head.rotation.x += (tHead.rotX - head.rotation.x) * sp;
+    head.rotation.y += (tHead.rotY - head.rotation.y) * sp;
+    head.rotation.z += (tHead.rotZ - head.rotation.z) * sp;
+  }
+
+  // Limbs Rotations
+  ['left', 'right'].forEach(side => {
+    const arm = limbs[side + 'Arm'];
+    const elbow = limbs[side + 'Elbow'];
+    const wrist = limbs[side + 'Wrist'];
+    const tArm = limbTargets[side + 'Arm'];
+    const tElbow = limbTargets[side + 'Elbow'];
+    const tWrist = limbTargets[side + 'Wrist'];
+
+    if (arm && tArm) {
+      arm.rotation.x += (tArm.rotX - arm.rotation.x) * sp;
+      arm.rotation.y += (tArm.rotY - arm.rotation.y) * sp;
+      arm.rotation.z += (tArm.rotZ - arm.rotation.z) * sp;
+    }
+    if (elbow && tElbow) elbow.rotation.x += (tElbow.rotX - elbow.rotation.x) * sp;
+    if (wrist && tWrist) {
+      wrist.rotation.x += (tWrist.rotX - wrist.rotation.x) * sp;
+      wrist.rotation.z += (tWrist.rotZ - wrist.rotation.z) * sp;
+    }
+
+    // ==================== ADVANCED 3-PHALANX FINGER KINEMATICS ====================
+    const fingers = limbs[side + 'Fingers'];
+    if (fingers) {
+      const isTargetHand = (fingerTargetHand === 'both' || fingerTargetHand === side);
+      const timeSec = Date.now() * 0.005;
+
+      fingers.forEach((f, fIdx) => {
+        let curl = 0;
+        if (manualFingerControl && isTargetHand) {
+          if (fingerWaveActive) {
+            // Smooth undulating finger wave
+            curl = 0.5 + 0.5 * Math.sin(timeSec + fIdx * 0.7);
+          } else {
+            curl = fingerAngles[f.name] || 0;
+          }
+        } else {
+          // Driven by BCI neural decoder
+          curl = limbTargets[side + 'FistCurl'] || 0;
+        }
+
+        // Progressive multi-joint flexion
+        const baseCurl = f.isThumb ? -curl * 0.75 : -curl * 1.30;
+        const midCurl  = f.isThumb ? -curl * 0.85 : -curl * 1.50;
+        const distCurl = f.isThumb ? -curl * 0.50 : -curl * 0.90;
+
+        f.base.rotation.x += (baseCurl - f.base.rotation.x) * sp;
+        f.mid.rotation.x  += (midCurl - f.mid.rotation.x) * sp;
+        if (f.dist) f.dist.rotation.x += (distCurl - f.dist.rotation.x) * sp;
+
+        // Opposable Thumb Abduction & Rotation
+        if (f.isThumb) {
+          const oppAngle = (side === 'left' ? -1 : 1) * (0.35 + curl * 0.45);
+          f.base.rotation.y += (oppAngle - f.base.rotation.y) * sp;
+        }
+      });
+    }
+
+    // Legs
+    const leg = limbs[side + 'Leg'];
+    const knee = limbs[side + 'Knee'];
+    const ankle = limbs[side + 'Ankle'];
+    const tLeg = limbTargets[side + 'Leg'];
+    const tKnee = limbTargets[side + 'Knee'];
+    const tAnkle = limbTargets[side + 'Ankle'];
+
+    if (leg && tLeg)     leg.rotation.x += (tLeg.rotX - leg.rotation.x) * sp;
+    if (knee && tKnee)   knee.rotation.x += (tKnee.rotX - knee.rotation.x) * sp;
+    if (ankle && tAnkle) ankle.rotation.x += (tAnkle.rotX - ankle.rotation.x) * sp;
+  });
+
+  // Natural Humanoid Floating Breathing Micro-Motion
+  if (robotGroup) {
+    robotGroup.position.y = Math.sin(Date.now() * 0.0015) * 0.025;
+  }
+
+  // Arc Reactor Core Rotation
+  if (limbs.reactorCore) {
+    limbs.reactorCore.rotation.z += 0.02;
+  }
+
+  // Glow conduits pulse
+  const baseIntensity = limbTargets.glowIntensity || 1.0;
+  glowMaterials.forEach(mat => {
+    mat.emissiveIntensity += ((baseIntensity + Math.sin(Date.now() * 0.003) * 0.2) - mat.emissiveIntensity) * 0.1;
+  });
+
+  robotRenderer.render(robotScene, robotCamera);
+}
+
+function resizeRobot() {
+  const container = document.getElementById('robotStage');
+  if (!container || !robotRenderer) return;
+  const w = container.clientWidth, h = container.clientHeight;
+  robotCamera.aspect = w / h;
+  robotCamera.updateProjectionMatrix();
+  robotRenderer.setSize(w, h);
+}
+
+/* ================================================================
+   TAB 3: 10-20 INTERNATIONAL ELECTRODE TOPOMAP & SPECTRUM
+   ================================================================ */
+const ELECTRODES = [
+  // Frontal Polar & Frontal
+  { id: 'FP1', x: 0.38, y: 0.16 }, { id: 'FPZ', x: 0.50, y: 0.14 }, { id: 'FP2', x: 0.62, y: 0.16 },
+  { id: 'AF7', x: 0.26, y: 0.24 }, { id: 'AF3', x: 0.40, y: 0.25 }, { id: 'AFZ', x: 0.50, y: 0.25 }, { id: 'AF4', x: 0.60, y: 0.25 }, { id: 'AF8', x: 0.74, y: 0.24 },
+  { id: 'F7',  x: 0.18, y: 0.35 }, { id: 'F3',  x: 0.34, y: 0.36 }, { id: 'FZ',  x: 0.50, y: 0.36 }, { id: 'F4',  x: 0.66, y: 0.36 }, { id: 'F8',  x: 0.82, y: 0.35 },
+  // Frontocentral & Central (Motor Cortex)
+  { id: 'FC5', x: 0.22, y: 0.45 }, { id: 'FC3', x: 0.35, y: 0.45 }, { id: 'FCZ', x: 0.50, y: 0.45 }, { id: 'FC4', x: 0.65, y: 0.45 }, { id: 'FC6', x: 0.78, y: 0.45 },
+  { id: 'C5',  x: 0.18, y: 0.53 }, { id: 'C3',  x: 0.32, y: 0.53, key: true }, { id: 'CZ',  x: 0.50, y: 0.53, key: true }, { id: 'C4',  x: 0.68, y: 0.53, key: true }, { id: 'C6',  x: 0.82, y: 0.53 },
+  // Centroparietal & Parietal
+  { id: 'CP5', x: 0.22, y: 0.62 }, { id: 'CP3', x: 0.35, y: 0.62 }, { id: 'CPZ', x: 0.50, y: 0.62 }, { id: 'CP4', x: 0.65, y: 0.62 }, { id: 'CP6', x: 0.78, y: 0.62 },
+  { id: 'P7',  x: 0.18, y: 0.70 }, { id: 'P3',  x: 0.34, y: 0.70 }, { id: 'PZ',  x: 0.50, y: 0.70 }, { id: 'P4',  x: 0.66, y: 0.70 }, { id: 'P8',  x: 0.82, y: 0.70 },
+  // Occipital
+  { id: 'O1',  x: 0.38, y: 0.84 }, { id: 'OZ',  x: 0.50, y: 0.85 }, { id: 'O2',  x: 0.62, y: 0.84 }
+];
+
+function drawTopomap() {
+  const canvas = document.getElementById('topoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2, r = w * 0.42;
+
+  // Head Silhouette Circle
+  ctx.strokeStyle = 'rgba(0, 245, 212, 0.4)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Nose triangle
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, cy - r);
+  ctx.lineTo(cx, cy - r - 16);
+  ctx.lineTo(cx + 14, cy - r);
+  ctx.stroke();
+
+  // Ears
+  ctx.beginPath();
+  ctx.arc(cx - r - 2, cy, 12, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + r + 2, cy, 12, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.stroke();
+
+  // Draw Electrodes
+  ELECTRODES.forEach(el => {
+    const ex = el.x * w;
+    const ey = el.y * h;
+    const isSelected = (el.id === selectedChannelName);
+
+    ctx.beginPath();
+    ctx.arc(ex, ey, isSelected ? 9 : (el.key ? 7 : 5), 0, Math.PI * 2);
+
+    if (isSelected) {
+      ctx.fillStyle = '#00F5D4';
+      ctx.shadowColor = '#00F5D4';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (el.key) {
+      ctx.fillStyle = '#3A86FF';
+      ctx.fill();
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fill();
+    }
+
+    // Label
+    ctx.fillStyle = isSelected ? '#00F5D4' : (el.key ? '#F1F6FD' : 'rgba(255,255,255,0.4)');
+    ctx.font = isSelected ? 'bold 10px "IBM Plex Mono", monospace' : '9px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(el.id, ex, ey - 9);
+  });
+}
+
+document.getElementById('topoCanvas').addEventListener('click', e => {
+  const canvas = document.getElementById('topoCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+
+  let closest = null, minD = 9999;
+  ELECTRODES.forEach(el => {
+    const ex = el.x * canvas.width;
+    const ey = el.y * canvas.height;
+    const d = Math.hypot(clickX - ex, clickY - ey);
+    if (d < minD) { minD = d; closest = el; }
+  });
+
+  if (closest && minD < 24) {
+    selectedChannelName = closest.id;
+    document.getElementById('selectedChannelLabel').textContent = `CH: ${closest.id} (SELECTED ELECTRODE)`;
+    drawTopomap();
+    drawSingleChannelTrace();
+  }
+});
+
+function drawSingleChannelTrace() {
+  const canvas = document.getElementById('singleChannelCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+
+  // Synthetic or real trace for selected channel
+  const currentRecord = records[currentIdx];
+  const trace = (currentRecord && currentRecord.waveform && currentRecord.waveform[0]) || [];
+
+  ctx.save();
+  ctx.strokeStyle = '#00F5D4';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#00F5D4';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  if (trace.length) {
+    trace.forEach((v, idx) => {
+      const x = (idx / (trace.length - 1)) * w;
+      const y = h/2 - v * (h * 0.35);
+      idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+  } else {
+    for (let x = 0; x < w; x += 4) {
+      const y = h/2 + Math.sin(x * 0.08 + Date.now()*0.005) * 20;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function updateChannelBands(record) {
+  // Update frequency power bars dynamically
+  const isMotorImagery = (record.predicted_class === 'left' || record.predicted_class === 'right' || record.predicted_class === 'both_fists');
+  const alphaPower = isMotorImagery ? 25 : 55; // Mu ERD suppression
+  const betaPower  = isMotorImagery ? 45 : 20;
+
+  document.getElementById('bandFillAlpha').style.width = alphaPower + '%';
+  document.getElementById('bandValAlpha').textContent = alphaPower + '%';
+
+  document.getElementById('bandFillBeta').style.width = betaPower + '%';
+  document.getElementById('bandValBeta').textContent = betaPower + '%';
+}
+
+/* ================================================================
+   TAB 4: SESSION ANALYTICS & BENCHMARK CHARTS
+   ================================================================ */
+function computeSessionAnalytics() {
+  let correct = 0, confSum = 0, labelled = 0;
+  const n = labelOrder.length;
+  const cm = Array.from({length: n}, () => Array(n).fill(0));
+
+  records.forEach(r => {
+    const t = labelOrder.indexOf(r.true_class);
+    const p = labelOrder.indexOf(r.predicted_class);
+    if (t >= 0 && p >= 0) cm[t][p]++;
+    if (r.true_class != null) { labelled++; if (r.true_class === r.predicted_class) correct++; }
+    confSum += (r.probs[r.predicted_class] || 0);
+  });
+
+  const total = records.length || 1;
+  document.getElementById('statAccuracy').textContent = labelled ? (100 * correct / labelled).toFixed(1) + '%' : 'n/a (no ground truth)';
+  document.getElementById('statWindowsCount').textContent = records.length;
+  document.getElementById('statMeanConf').textContent = (100 * confSum / total).toFixed(1) + '%';
+
+  // Build Confusion Matrix
+  const maxVal = Math.max(...cm.flat(), 1);
+  let html = '<tr><th></th>' + labelOrder.map(l => `<th>Pred: ${displayName(l)}</th>`).join('') + '</tr>';
+  labelOrder.forEach((rowLabel, i) => {
+    html += `<tr><td class="row-header">True: ${displayName(rowLabel)}</td>` +
+      labelOrder.map((_, j) => {
+        const val = cm[i][j];
+        const ratio = val / maxVal;
+        const isDiag = (i === j);
+        const bg = isDiag
+          ? `rgba(0, 245, 212, ${Math.max(0.08, ratio * 0.35)})`
+          : val > 0 ? `rgba(255, 51, 102, ${Math.max(0.05, ratio * 0.25)})` : 'rgba(255,255,255,0.02)';
+        const col = isDiag ? 'var(--teal-neon)' : 'var(--text-main)';
+        return `<td style="background:${bg}; color:${col};">${val}</td>`;
+      }).join('') + '</tr>';
+  });
+  document.getElementById('analyticsConfusionMatrix').innerHTML = html;
+}
+
+function drawConfidenceTimeline() {
+  const canvas = document.getElementById('confTimelineCanvas');
+  if (!canvas || !records.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const box = canvas.getBoundingClientRect();
+  canvas.style.width = '100%'; canvas.style.height = '120px';
+  canvas.width = Math.max(1, Math.round(box.width * dpr)); canvas.height = 120 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = canvas.width / dpr, h = canvas.height / dpr;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.beginPath(); ctx.moveTo(0, h * 0.5); ctx.lineTo(w, h * 0.5); ctx.stroke();
+
+  // Plot line of top confidence across records
+  ctx.strokeStyle = '#00F5D4';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  records.forEach((r, idx) => {
+    const x = (idx / (records.length - 1)) * w;
+    const topProb = r.probs[r.predicted_class] || 0.5;
+    const y = h - topProb * (h - 16) - 8;
+    idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function exportSessionJson() {
+  if (!logData) return;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logData, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", `neurobot_inference_log_${Date.now()}.json`);
+  dlAnchor.click();
+}
+
+function exportSummaryCsv() {
+  if (!records.length) return;
+  let csv = "time_sec,true_class,predicted_class,confidence\n";
+  records.forEach(r => {
+    csv += `${r.t},${r.true_class == null ? '' : r.true_class},${r.predicted_class},${(r.probs[r.predicted_class] || 0).toFixed(4)}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `neurobot_session_summary_${Date.now()}.csv`;
+  a.click();
+}
+
+/* ================================================================
+   TAB 2: CUSTOM DATA LAB HANDLERS & UPLOAD PIPELINE
+   ================================================================ */
+let pendingCustomSession = null;
+
+const dropzone = document.getElementById('dropzoneBox');
+const fileInput = document.getElementById('hiddenFileInput');
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleUserFile(e.target.files[0]);
+});
+
+['dragover', 'dragleave', 'drop'].forEach(evtName => {
+  dropzone.addEventListener(evtName, e => {
+    e.preventDefault();
+    if (evtName === 'dragover') dropzone.classList.add('drag-over');
+    else dropzone.classList.remove('drag-over');
+    if (evtName === 'drop' && e.dataTransfer.files[0]) {
+      handleUserFile(e.dataTransfer.files[0]);
+    }
+  });
+});
+
+async function handleUserFile(file) {
+  const name = file.name.toLowerCase();
+  showLoading('Ingesting ' + file.name + '...', 'Analyzing file headers & channel structure');
+
+  setStepStatus(1, 'completed', file.name);
+
+  if (name.endsWith('.json')) {
+    // Client-side JSON parse
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order');
+        setStepStatus(2, 'completed', '64 channels loaded');
+        setStepStatus(3, 'completed', 'Pre-filtered log verified');
+        setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
+        pendingCustomSession = parsed;
+        document.getElementById('launchLabSessionBtn').disabled = false;
+        hideLoading();
+      } catch (err) {
+        hideLoading();
+        alert('Could not parse JSON inference log: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  // If EDF or CSV, send to backend upload API
+  const formData = new FormData();
+  formData.append('file', file);
+  const task = document.getElementById('cfgTask').value;
+  const sfreq = document.getElementById('cfgSfreq').value;
+
+  const endpoint = name.endsWith('.edf') || name.endsWith('.bdf')
+    ? `${API_BASE}/api/upload/edf?task=${task}`
+    : `${API_BASE}/api/upload/csv?task=${task}&sfreq=${sfreq}`;
+
+  try {
+    setStepStatus(2, 'active', 'Sending to backend MNE processor...');
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.detail || 'HTTP ' + res.status);
+    }
+
+    setStepStatus(2, 'completed', 'Standardized 64 channels');
+    setStepStatus(3, 'completed', 'CAR + 4-40Hz Bandpass applied');
+    setStepStatus(4, 'completed', 'Model forward pass complete');
+
+    const resultData = await res.json();
+    pendingCustomSession = resultData;
+    document.getElementById('launchLabSessionBtn').disabled = false;
+    hideLoading();
+    alert(`Successfully processed ${file.name}!\nDecoded ${resultData.total_records} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
+  } catch (err) {
+    hideLoading();
+    // No fake decoding: without the backend nothing can be decoded
+    alert(`Could not process ${file.name}: ${err.message}\nThe backend must be running to decode uploaded recordings.`);
+  }
+}
+
+async function generateSyntheticDemo(task) {
+  showLoading(`Generating synthetic BCI motor imagery trial (${task})...`, 'Simulating 10Hz Mu rhythm desynchronization');
+  try {
+    const res = await fetch(`${API_BASE}/api/sample/generate?task=${task}&duration=15.0`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    pendingCustomSession = data;
+    setStepStatus(1, 'completed', `synthetic_${task}_15s.edf`);
+    setStepStatus(2, 'completed', '64 Channels Synthesized');
+    setStepStatus(3, 'completed', 'CAR + 4-40Hz Bandpass Applied');
+    setStepStatus(4, 'completed', `${data.total_records} Windows decoded`);
+    document.getElementById('launchLabSessionBtn').disabled = false;
+    hideLoading();
+    alert(`Synthetic trial generated! Decoded ${data.total_records} windows. Click 'Launch Decoded Session'.`);
+  } catch (err) {
+    hideLoading();
+    alert(`Could not generate the synthetic session: ${err.message}\nThe backend must be running.`);
+  }
+}
+
+function launchCustomSession() {
+  if (!pendingCustomSession) return;
+  setupSession(pendingCustomSession, 'custom', pendingCustomSession.source_filename || 'Custom Ingestion');
+  switchTab('decoder');
+  play();
+}
+
+function downloadSampleCsv() {
+  window.open(`${API_BASE}/api/sample/download/csv`, '_blank');
+}
+
+function setStepStatus(stepNum, status, detail) {
+  const el = document.getElementById('step' + stepNum);
+  const det = document.getElementById(`step${stepNum}-detail`);
+  if (!el) return;
+  el.className = 'stepper-step ' + status;
+  if (detail && det) det.textContent = detail;
+}
+
+/* ================================================================
+   PRESET TASKS (LEFT/RIGHT & FISTS/FEET)
+   ================================================================ */
+async function loadPresetTask(taskKey) {
+  showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' dataset...');
+  try {
+    const res = await fetch(TASK_FILES[taskKey]);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    hideLoading();
+    setupSession(data, taskKey, TASK_FILES[taskKey]);
+    switchTab('decoder');
+  } catch (err) {
+    hideLoading();
+    alert('Could not auto-load dataset: ' + err.message);
+  }
+}
+
+/* ================================================================
+   BACKEND HEALTH CHECK
+   ================================================================ */
+async function checkBackendHealth() {
+  const pill = document.getElementById('backendStatusPill');
+  const txt = document.getElementById('backendStatusText');
+  try {
+    const res = await fetch(`${API_BASE}/api/health`, { method: 'GET', mode: 'cors' });
+    if (res.ok) {
+      const data = await res.json();
+      pill.className = 'status-pill online';
+      txt.textContent = 'BACKEND ONLINE (:8000)';
+    } else {
+      throw new Error();
+    }
+  } catch (e) {
+    pill.className = 'status-pill offline';
+    txt.textContent = 'BACKEND OFFLINE';
+  }
+}
+setInterval(checkBackendHealth, 5000);
+checkBackendHealth();
+
+function showLoading(title, sub) {
+  document.getElementById('loadingModalTitle').textContent = title || 'Loading...';
+  document.getElementById('loadingModalSub').textContent = sub || 'Processing';
+  document.getElementById('loadingModal').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingModal').classList.remove('active');
+}
+
+/* ================================================================
+   BOOTSTRAP
+   ================================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  loadPresetTask('left_right');
+});
+</script>
+</body>
+</html>

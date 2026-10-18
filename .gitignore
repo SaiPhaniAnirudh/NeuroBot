@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+# Large training caches written by the Kaggle notebooks
+ext_pool_*.npz
+ext_state_*.pt

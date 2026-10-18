@@ -1,0 +1,186 @@
+{
+ "S01|2class|tcformer|baseline": {
+  "ME": {
+   "per_seed_mv": [
+    0.7857142857142857,
+    0.8013392857142857,
+    0.7834821428571429
+   ],
+   "per_seed_window": [
+    0.6859612362493452,
+    0.713200628601362,
+    0.6960450497642745
+   ],
+   "ensemble_mv": 0.7991071428571429,
+   "ensemble_window": 0.7156888423258251,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7636,
+   "chance": 0.5
+  },
+  "MI": {
+   "per_seed_mv": [
+    0.6696428571428571,
+    0.6964285714285714,
+    0.6584821428571429
+   ],
+   "per_seed_window": [
+    0.6239696454271882,
+    0.6344367395001963,
+    0.632212482009682
+   ],
+   "ensemble_mv": 0.7142857142857143,
+   "ensemble_window": 0.6450346722491168,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7643,
+   "chance": 0.5
+  }
+ },
+ "S01|2class|eegnet|baseline": {
+  "ME": {
+   "per_seed_mv": [
+    0.6897321428571429,
+    0.7544642857142857,
+    0.7142857142857143
+   ],
+   "per_seed_window": [
+    0.6401257202723939,
+    0.679020429544264,
+    0.6610790990047145
+   ],
+   "ensemble_mv": 0.7611607142857143,
+   "ensemble_window": 0.6866160293347302,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7636,
+   "chance": 0.5
+  },
+  "MI": {
+   "per_seed_mv": [
+    0.6272321428571429,
+    0.6205357142857143,
+    0.6763392857142857
+   ],
+   "per_seed_window": [
+    0.5979327489205809,
+    0.6094465524008897,
+    0.6209603558811985
+   ],
+   "ensemble_mv": 0.6540178571428571,
+   "ensemble_window": 0.628941515111867,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7643,
+   "chance": 0.5
+  }
+ },
+ "S01|2class|arch_ensemble|baseline": {
+  "ME": {
+   "per_seed_mv": [],
+   "per_seed_window": [],
+   "ensemble_mv": 0.7879464285714286,
+   "ensemble_window": 0.714248297537978,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7636,
+   "chance": 0.5
+  },
+  "MI": {
+   "per_seed_mv": [],
+   "per_seed_window": [],
+   "ensemble_mv": 0.6986607142857143,
+   "ensemble_window": 0.643987962841816,
+   "n_eval_trials": 448,
+   "n_eval_windows": 7643,
+   "chance": 0.5
+  }
+ },
+ "S01|3class|tcformer|baseline": {
+  "ME": {
+   "per_seed_mv": [
+    0.45535714285714285,
+    0.47619047619047616,
+    0.46130952380952384
+   ],
+   "per_seed_window": [
+    0.43496503496503497,
+    0.4465034965034965,
+    0.4442307692307692
+   ],
+   "ensemble_mv": 0.44642857142857145,
+   "ensemble_window": 0.43916083916083914,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5720,
+   "chance": 0.3333333333333333
+  },
+  "MI": {
+   "per_seed_mv": [
+    0.39285714285714285,
+    0.38392857142857145,
+    0.4107142857142857
+   ],
+   "per_seed_window": [
+    0.3781190019193858,
+    0.37602512650497294,
+    0.3850985866340953
+   ],
+   "ensemble_mv": 0.43154761904761907,
+   "ensemble_window": 0.3980108183563078,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5731,
+   "chance": 0.3333333333333333
+  }
+ },
+ "S01|3class|eegnet|baseline": {
+  "ME": {
+   "per_seed_mv": [
+    0.4523809523809524,
+    0.49702380952380953,
+    0.46726190476190477
+   ],
+   "per_seed_window": [
+    0.4382867132867133,
+    0.4526223776223776,
+    0.44772727272727275
+   ],
+   "ensemble_mv": 0.46726190476190477,
+   "ensemble_window": 0.4519230769230769,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5720,
+   "chance": 0.3333333333333333
+  },
+  "MI": {
+   "per_seed_mv": [
+    0.40773809523809523,
+    0.37202380952380953,
+    0.34523809523809523
+   ],
+   "per_seed_window": [
+    0.37742104344791483,
+    0.38160879427674055,
+    0.3524690280928285
+   ],
+   "ensemble_mv": 0.37202380952380953,
+   "ensemble_window": 0.3730588030012214,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5731,
+   "chance": 0.3333333333333333
+  }
+ },
+ "S01|3class|arch_ensemble|baseline": {
+  "ME": {
+   "per_seed_mv": [],
+   "per_seed_window": [],
+   "ensemble_mv": 0.47619047619047616,
+   "ensemble_window": 0.45314685314685316,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5720,
+   "chance": 0.3333333333333333
+  },
+  "MI": {
+   "per_seed_mv": [],
+   "per_seed_window": [],
+   "ensemble_mv": 0.4107142857142857,
+   "ensemble_window": 0.3924271505845402,
+   "n_eval_trials": 336,
+   "n_eval_windows": 5731,
+   "chance": 0.3333333333333333
+  }
+ }
+}

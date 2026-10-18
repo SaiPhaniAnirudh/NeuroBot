@@ -1,0 +1,28 @@
+{
+ "inference_log_left_right.json": {
+  "source": "Earlier replay log, window-level split (superseded by trial-level results)",
+  "task": "Task A (left fist / right fist)",
+  "n_windows": 338,
+  "per_window_accuracy_in_log": 0.8136,
+  "caveats": [
+   "The accuracy matches the v7 flagship exports reported in the paper (Table II, 81.4% and 86.4% per-window, window-level split); the file itself does not record subject or architecture.",
+   "A window-level split lets overlapping windows of one trial fall on both sides of the split, so this accuracy is optimistic (paper Section 7, Table IV).",
+   "The time axis is replay time (125 ms per record), not recording time: the windows are not in recording order."
+  ]
+ },
+ "inference_log_fists_feet.json": {
+  "source": "Earlier replay log, window-level split (superseded by trial-level results)",
+  "task": "Task B (both fists / both feet)",
+  "n_windows": 338,
+  "per_window_accuracy_in_log": 0.8639,
+  "caveats": [
+   "The accuracy matches the v7 flagship exports reported in the paper (Table II, 81.4% and 86.4% per-window, window-level split); the file itself does not record subject or architecture.",
+   "A window-level split lets overlapping windows of one trial fall on both sides of the split, so this accuracy is optimistic (paper Section 7, Table IV).",
+   "The time axis is replay time (125 ms per record), not recording time: the windows are not in recording order."
+  ]
+ },
+ "inference_log.json": {
+  "source": "Original single-subject EEGNet log (S001; not served by the API)",
+  "n_windows": 338
+ }
+}
