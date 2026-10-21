@@ -1,1 +1,100 @@
-{"models": [{"id": "tiny-left_right-me", "task": "left_right", "mode": "ME", "arch": "tiny", "title": "tiny-left_right-me", "label_order": ["left", "rest", "right"], "onnx_path": "tiny-left_right-me.onnx", "output": "logits", "evaluation": {"majority_vote_accuracy": 0.5, "n_heldout_trials": 18}}, {"id": "tiny-left_right-mi", "task": "left_right", "mode": "MI", "arch": "tiny", "title": "tiny-left_right-mi", "label_order": ["left", "rest", "right"], "onnx_path": "tiny-left_right-mi.onnx", "output": "logits", "evaluation": {"majority_vote_accuracy": 0.5, "n_heldout_trials": 18}}, {"id": "tiny-fists_feet-me", "task": "fists_feet", "mode": "ME", "arch": "tiny", "title": "tiny-fists_feet-me", "label_order": ["both_feet", "both_fists", "rest"], "onnx_path": "tiny-fists_feet-me.onnx", "output": "logits", "evaluation": {"majority_vote_accuracy": 0.5, "n_heldout_trials": 18}}, {"id": "tiny-fists_feet-mi", "task": "fists_feet", "mode": "MI", "arch": "tiny", "title": "tiny-fists_feet-mi", "label_order": ["both_feet", "both_fists", "rest"], "onnx_path": "tiny-fists_feet-mi.onnx", "output": "logits", "evaluation": {"majority_vote_accuracy": 0.5, "n_heldout_trials": 18}}]}
+{
+ "models": [
+  {
+   "id": "tcformer-A-s007-me",
+   "task": "left_right",
+   "mode": "ME",
+   "arch": "tcformer",
+   "title": "TCFormer, subject S007, executed movement",
+   "label_order": [
+    "left",
+    "rest",
+    "right"
+   ],
+   "onnx_path": "tcformer-A-s007-me.onnx",
+   "output": "logits",
+   "trained_on": "PhysioNet eegmmidb subject S007 (ME specialist), trained on this subject's own earlier trials only (no cross-subject pretraining), seed 0",
+   "variant": "baseline",
+   "protocol": "trial-level split (60% pretrain / 20% fine-tune / 20% held-out), as in the paper",
+   "warning": "Personal model of subject S007: meaningful only for that subject's recordings (or the replay), not for other people. Best-case flagship subject.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.8333333333333334,
+    "n_heldout_trials": 18,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 9.5367431640625e-07
+   }
+  },
+  {
+   "id": "tcformer-A-s007-mi",
+   "task": "left_right",
+   "mode": "MI",
+   "arch": "tcformer",
+   "title": "TCFormer, subject S007, imagined movement",
+   "label_order": [
+    "left",
+    "rest",
+    "right"
+   ],
+   "onnx_path": "tcformer-A-s007-mi.onnx",
+   "output": "logits",
+   "trained_on": "PhysioNet eegmmidb subject S007 (MI specialist), trained on this subject's own earlier trials only (no cross-subject pretraining), seed 0",
+   "variant": "baseline",
+   "protocol": "trial-level split (60% pretrain / 20% fine-tune / 20% held-out), as in the paper",
+   "warning": "Personal model of subject S007: meaningful only for that subject's recordings (or the replay), not for other people. Best-case flagship subject.",
+   "evaluation": {
+    "majority_vote_accuracy": 1.0,
+    "n_heldout_trials": 18,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 7.152557373046875e-07
+   }
+  },
+  {
+   "id": "tcformer-B-s002-me",
+   "task": "fists_feet",
+   "mode": "ME",
+   "arch": "tcformer",
+   "title": "TCFormer, subject S002, executed movement",
+   "label_order": [
+    "both_feet",
+    "both_fists",
+    "rest"
+   ],
+   "onnx_path": "tcformer-B-s002-me.onnx",
+   "output": "logits",
+   "trained_on": "PhysioNet eegmmidb subject S002 (ME specialist), trained on this subject's own earlier trials only (no cross-subject pretraining), seed 0",
+   "variant": "baseline",
+   "protocol": "trial-level split (60% pretrain / 20% fine-tune / 20% held-out), as in the paper",
+   "warning": "Personal model of subject S002: meaningful only for that subject's recordings (or the replay), not for other people. Best-case flagship subject.",
+   "evaluation": {
+    "majority_vote_accuracy": 1.0,
+    "n_heldout_trials": 18,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 8.046627044677734e-07
+   }
+  },
+  {
+   "id": "tcformer-B-s002-mi",
+   "task": "fists_feet",
+   "mode": "MI",
+   "arch": "tcformer",
+   "title": "TCFormer, subject S002, imagined movement",
+   "label_order": [
+    "both_feet",
+    "both_fists",
+    "rest"
+   ],
+   "onnx_path": "tcformer-B-s002-mi.onnx",
+   "output": "logits",
+   "trained_on": "PhysioNet eegmmidb subject S002 (MI specialist), trained on this subject's own earlier trials only (no cross-subject pretraining), seed 0",
+   "variant": "baseline",
+   "protocol": "trial-level split (60% pretrain / 20% fine-tune / 20% held-out), as in the paper",
+   "warning": "Personal model of subject S002: meaningful only for that subject's recordings (or the replay), not for other people. Best-case flagship subject.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.8888888888888888,
+    "n_heldout_trials": 18,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 5.960464477539062e-07
+   }
+  }
+ ]
+}

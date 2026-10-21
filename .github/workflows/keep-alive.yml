@@ -2,21 +2,62 @@ name: Render 24/7 Keep-Alive
 
 on:
   schedule:
-    # Runs every 10 minutes (Render sleeps after 15 minutes of inactivity)
+    # Runs every 10 minutes to prevent Render free instance from idling/sleeping (15 min inactivity timeout)
     - cron: '*/10 * * * *'
-  workflow_dispatch: # Allows manual ping trigger from GitHub Actions tab
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
 
 jobs:
   keep-alive:
+    name: Ping NeuroBot Render Service
     runs-on: ubuntu-latest
     steps:
-      - name: Ping NeuroBot Health Endpoint
+      - name: Ping NeuroBot Endpoints with Cold-Start Resilience
         run: |
-          echo "Triggering keep-alive ping to Render at $(date -u)..."
-          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 30 "https://neurobot-nrnn.onrender.com/api/health")
-          echo "HTTP Response Status: $STATUS"
-          if [ "$STATUS" -eq 200 ]; then
-            echo "SUCCESS: NeuroBot is awake and healthy!"
+          set +e  # Do not exit immediately on non-zero exit codes during retries
+          TARGET_URL="https://neurobot-nrnn.onrender.com/api/health"
+          UI_URL="https://neurobot-nrnn.onrender.com/"
+          MAX_ATTEMPTS=3
+          SLEEP_BETWEEN=15
+          SUCCESS=0
+
+          echo "=========================================================="
+          echo "Starting 24/7 Keep-Alive Ping at $(date -u)"
+          echo "Target Health URL: $TARGET_URL"
+          echo "=========================================================="
+
+          for attempt in $(seq 1 $MAX_ATTEMPTS); do
+            echo "[Attempt $attempt/$MAX_ATTEMPTS] Pinging health endpoint (timeout: 90s for cold starts)..."
+            
+            # Allow up to 90s max-time to give Render free tier sufficient time to wake up if sleeping
+            HTTP_CODE=$(curl -s -L -o /tmp/health_response.json -w "%{http_code}" --connect-timeout 20 --max-time 90 "$TARGET_URL")
+            CURL_STATUS=$?
+
+            echo "Curl exit status: $CURL_STATUS | HTTP Code: $HTTP_CODE"
+
+            if [ "$HTTP_CODE" -eq 200 ]; then
+              echo "✅ SUCCESS: NeuroBot is awake and healthy!"
+              if [ -f /tmp/health_response.json ]; then
+                echo "Response payload: $(head -c 200 /tmp/health_response.json)"
+              fi
+              SUCCESS=1
+              break
+            else
+              echo "⚠️ Attempt $attempt received HTTP $HTTP_CODE (exit: $CURL_STATUS). Service may still be spinning up."
+              if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+                echo "Waiting ${SLEEP_BETWEEN}s before retry..."
+                sleep $SLEEP_BETWEEN
+              fi
+            fi
+          done
+
+          # Also prime the UI root endpoint
+          echo "Priming UI frontend ($UI_URL)..."
+          curl -s -L -o /dev/null --connect-timeout 15 --max-time 30 "$UI_URL" || true
+
+          if [ "$SUCCESS" -eq 1 ]; then
+            echo "🎉 Keep-alive successful: NeuroBot instance is warm and responsive."
+            exit 0
           else
-            echo "NOTE: Received HTTP $STATUS (service was either waking up or busy)."
+            echo "ℹ️ Ping sent to trigger wake-up sequence. Render instance is spinning up."
+            exit 0
           fi

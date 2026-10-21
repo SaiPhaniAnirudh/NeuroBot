@@ -28,7 +28,7 @@ def test_tasks_lists_labels_models_and_replays(client):
     assert set(t) == {"left_right", "fists_feet"}
     assert t["left_right"]["available"] and t["left_right"]["models"] == {"ME": True, "MI": True}
     assert t["left_right"]["label_order"] == ["left", "rest", "right"]
-    assert t["left_right"]["replays"][0]["file"] == "inference_log_left_right.json"
+    assert t["left_right"]["replays"][0]["file"] == "replay_left_right_ME.json"
 
 
 def test_empty_server_is_honest(empty_client):
@@ -76,8 +76,9 @@ def test_replay_log_has_provenance(client):
     r = client.get("/api/replay/log/left_right")
     assert r.status_code == 200
     j = r.json()
-    assert len(j["records"]) == 338 and "window-level" in j["provenance"]["source"]
-    assert client.get("/api/replay/log/left_right?mode=MI").status_code == 200  # falls back to the earlier log
+    assert len(j["records"]) == 450 and j["provenance"]["subject"] == "S007"
+    assert "not training data" in j["provenance"]["source"]
+    assert client.get("/api/replay/log/left_right?mode=MI").json()["provenance"]["mode"] == "MI"
 
 
 def test_replay_unknown_task_is_404(client):
@@ -87,7 +88,7 @@ def test_replay_unknown_task_is_404(client):
 def test_websocket_streams_meta_then_records(client):
     with client.websocket_connect("/ws/replay/fists_feet") as ws:
         meta = ws.receive_json()
-        assert meta["type"] == "meta" and meta["total_records"] == 338 and meta["provenance"]
+        assert meta["type"] == "meta" and meta["total_records"] == 450 and meta["provenance"]
         rec = ws.receive_json()
         assert rec["type"] == "record" and set(rec["probs"]) == set(meta["label_order"])
 
@@ -133,7 +134,7 @@ def test_csv_header_order_is_respected(client):
     (b"", 422),
     (_csv(seconds=0.5), 422),         # shorter than one window
     (b"a,b\n1,x\n2,3\n", 422),        # non-numeric
-])
+], ids=["wrong_channels", "empty", "too_short", "non_numeric"])
 def test_csv_rejects_bad_files(client, payload, code):
     assert client.post("/api/upload/csv", files={"file": ("x.csv", payload)}).status_code == code
 
