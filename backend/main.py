@@ -318,11 +318,12 @@ def download_sample_csv():
 
 @app.get("/api/download/project-zip")
 def download_project_zip():
-    """Serves the project archive if one is placed next to the backend folder."""
+    """Serves the project archive if one is placed next to the backend folder, or redirects to GitHub."""
     zip_path = os.path.join(os.path.dirname(__file__), "..", "NeuroBot_Complete_Project.zip")
     if os.path.exists(zip_path):
         return FileResponse(zip_path, filename="NeuroBot_Complete_Project.zip", media_type="application/zip")
-    raise HTTPException(status_code=404, detail="Project archive not found on this server.")
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="https://github.com/SaiPhaniAnirudh/NeuroBot/archive/refs/heads/main.zip")
 
 
 # UI last, so that it never shadows an API route

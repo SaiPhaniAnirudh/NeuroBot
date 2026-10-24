@@ -3337,7 +3337,7 @@ async function handleUserFile(file) {
 async function generateSyntheticDemo(task) {
   showLoading(`Generating synthetic BCI motor imagery trial (${task})...`, 'Simulating 10Hz Mu rhythm desynchronization');
   try {
-    const res = await fetch(`${API_BASE}/api/sample/generate?task=${task}&duration=15.0`);
+    const res = await fetch(`${API_BASE}/api/sample/generate?task=${task}&mode=${PRESET_MODE}&duration=15.0`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     pendingCustomSession = data;
@@ -3459,7 +3459,11 @@ function setPresetMode(m) {
   PRESET_MODE = m;
   document.getElementById('btnModeME').classList.toggle('active', m === 'ME');
   document.getElementById('btnModeMI').classList.toggle('active', m === 'MI');
-  if (currentTask === 'left_right' || currentTask === 'fists_feet') loadPresetTask(currentTask);
+  if (currentTask === 'left_right' || currentTask === 'fists_feet') {
+    loadPresetTask(currentTask);
+  } else if (currentTask && currentTask.startsWith('finger_')) {
+    loadFingerDemo(parseInt(currentTask.split('_')[1]));
+  }
 }
 async function loadPresetTask(taskKey) {
   showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');

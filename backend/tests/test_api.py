@@ -234,6 +234,11 @@ def test_sample_template_round_trips_through_the_csv_endpoint(client):
     assert r.status_code == 200 and r.json()["total_records"] == (480 - 160) // 20 + 1
 
 
+def test_project_zip_download_redirects_or_serves(client):
+    r = client.get("/api/download/project-zip", follow_redirects=False)
+    assert r.status_code in (200, 307)
+
+
 # ── replay logs written by the export notebook ─────────────────────────────
 
 def test_notebook_replay_log_is_preferred_and_describes_itself(client, tmp_path, monkeypatch):

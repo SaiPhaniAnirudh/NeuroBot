@@ -11,7 +11,7 @@ truth for every number in it.**
 
 | Path | What it is |
 |---|---|
-| `backend/` | FastAPI server, ONNX model registry, preprocessing, 62 automated tests |
+| `backend/` | FastAPI server, ONNX model registry, preprocessing, 63 automated tests |
 | `backend/checkpoints/manifest.json` | the four deployed flagship TCFormer ONNX models (S007 Task A, S002 Task B; ME and MI) |
 | `backend/data/` | stored replay logs and `replay_index.json` (what each log is) |
 | `ui/index.html` | Decode Console (single file; Three.js is loaded from a CDN) |
@@ -26,7 +26,7 @@ truth for every number in it.**
 ```bash
 pip install -r backend/requirements-dev.txt
 cd backend && uvicorn main:app --port 8000      # UI and API on http://localhost:8000
-pytest tests                                    # 62 tests
+pytest tests                                    # 63 tests
 python ../scripts/recompute_paper_stats.py      # paper Tables VIII and IX
 ```
 
