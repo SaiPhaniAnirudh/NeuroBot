@@ -4,6 +4,8 @@ on:
   schedule:
     # Runs every 10 minutes to prevent Render free instance from idling/sleeping (15 min inactivity timeout)
     - cron: '*/10 * * * *'
+  push:
+    branches: [ main ]
   workflow_dispatch: # Allows manual trigger from GitHub Actions UI
 
 jobs:

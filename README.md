@@ -11,7 +11,7 @@ truth for every number in it.**
 
 | Path | What it is |
 |---|---|
-| `backend/` | FastAPI server, ONNX model registry, preprocessing, 58 automated tests |
+| `backend/` | FastAPI server, ONNX model registry, preprocessing, 62 automated tests |
 | `backend/checkpoints/manifest.json` | the four deployed flagship TCFormer ONNX models (S007 Task A, S002 Task B; ME and MI) |
 | `backend/data/` | stored replay logs and `replay_index.json` (what each log is) |
 | `ui/index.html` | Decode Console (single file; Three.js is loaded from a CDN) |
@@ -26,7 +26,7 @@ truth for every number in it.**
 ```bash
 pip install -r backend/requirements-dev.txt
 cd backend && uvicorn main:app --port 8000      # UI and API on http://localhost:8000
-pytest tests                                    # 58 tests
+pytest tests                                    # 62 tests
 python ../scripts/recompute_paper_stats.py      # paper Tables VIII and IX
 ```
 
@@ -64,7 +64,11 @@ Rules the server follows:
 `render.yaml` is included (free web service, health check `/api/health`).
 - **Build Command**: `pip install -r backend/requirements.txt`
 - **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **24/7 Keep-Alive**: Included via `.github/workflows/keep-alive.yml` which pings `/api/health` every 10 minutes to prevent the Render free tier from idling/sleeping. A local runner is also provided in `scripts/keep_alive.py`.
+- **24/7 Keep-Alive**: Multi-tier keep-alive system to prevent Render free instance from sleeping:
+  1. **Internal Server Keep-Alive**: FastAPI background task pings the public health endpoint every 10 min when running on Render (`RENDER=true`).
+  2. **GitHub Actions 24/7 Workflow**: `.github/workflows/keep-alive.yml` pings the `/api/health` and UI root on schedule and on push with cold-start retry resilience.
+  3. **Client-Side Heartbeat**: Decode Console frontend pings `/api/health` while active.
+  4. **Standalone Script**: `scripts/keep_alive.py` available for local background runners.
 
 ## Known limits
 

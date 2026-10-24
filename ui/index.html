@@ -127,8 +127,9 @@ body::after {
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  position: relative;
-  z-index: 10;
+  position: sticky;
+  top: 14px;
+  z-index: 100;
   flex-wrap: wrap;
 }
 
@@ -1262,6 +1263,9 @@ body::after {
       <button class="quick-upload-btn" onclick="switchTab('lab')" title="Load or Upload EEG Dataset">
         <span>⚡</span> Load Data
       </button>
+      <button class="quick-upload-btn" onclick="downloadProjectZip()" style="border-color:rgba(58,134,255,0.4);color:#93B8FF;background:rgba(58,134,255,0.12);" title="Download Complete Project ZIP Archive">
+        <span>📦</span> Download ZIP
+      </button>
     </div>
   </header>
 
@@ -1431,11 +1435,11 @@ body::after {
             </button>
             <button class="preset-action-card" id="taskBtnFinger2" onclick="loadFingerDemo(2)">
               <div class="pac-title">🖐️ Fingers: Thumb vs. Pinky</div>
-              <div class="pac-desc">Right-hand finger flexion in a close-up view. Simulated demo until a finger model is exported.</div>
+              <div class="pac-desc">Right-hand finger flexion in a close-up view. Replays held-out trials of an S01 model (single seed, 25 epochs).</div>
             </button>
             <button class="preset-action-card" id="taskBtnFinger3" onclick="loadFingerDemo(3)">
               <div class="pac-title">🖐️ Fingers: Thumb, Index, Pinky</div>
-              <div class="pac-desc">Three-finger version of the same view. Simulated demo, not decoded from EEG.</div>
+              <div class="pac-desc">Three-finger version of the same view. Shows a labelled simulated demo only if no replay is available.</div>
             </button>
           </div>
 
@@ -1585,7 +1589,7 @@ body::after {
         <div class="topomap-box">
           <canvas id="topoCanvas" width="360" height="360"></canvas>
           <div style="font-size:11.5px;color:var(--text-muted);margin-top:12px;text-align:center;">
-            Click any electrode node on the 10-20 montage above to inspect its real-time voltage and frequency spectrum.
+            Click an electrode to see its stored trace. Only the replay's six stored channels have one. Voltage, band power and signal quality are not measured here, because the stored windows are z-scored.
           </div>
 
           <div class="channel-detail-card">
@@ -1594,52 +1598,52 @@ body::after {
               Primary sensorimotor area corresponding to right hand/fist motor imagery desynchronization.
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
-              <div>RMS: <span class="mono" style="color:var(--teal-neon);" id="chanRms">14.2 µV</span></div>
-              <div>Peak-to-Peak: <span class="mono" style="color:var(--teal-neon);" id="chanP2p">68.4 µV</span></div>
-              <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">+18.5 dB</span></div>
-              <div>Status: <span class="mono" style="color:var(--teal-neon);">CALIBRATED</span></div>
+              <div>RMS: <span class="mono" style="color:var(--teal-neon);" id="chanRms">n/a</span></div>
+              <div>Peak-to-Peak: <span class="mono" style="color:var(--teal-neon);" id="chanP2p">n/a</span></div>
+              <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">n/a</span></div>
+              <div>Status: <span class="mono" style="color:var(--text-muted);">not measured</span></div>
             </div>
           </div>
         </div>
 
         <!-- Right: Power Spectrum Breakdown & Channel Traces -->
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Frequency Band Power Spectrum</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Frequency Band Power Spectrum (not measured in this build)</div>
           <div class="bands-container">
             <div class="band-row">
               <div class="band-name">Delta (0.5 – 4 Hz)</div>
               <div class="band-bar-track">
-                <div class="band-bar-fill" id="bandFillDelta" style="background:var(--text-muted);width:25%;"></div>
+                <div class="band-bar-fill" id="bandFillDelta" style="background:var(--text-muted);width:0%;"></div>
               </div>
-              <div class="band-power-val" id="bandValDelta">12%</div>
+              <div class="band-power-val" id="bandValDelta">n/a</div>
             </div>
             <div class="band-row">
               <div class="band-name">Theta (4 – 8 Hz)</div>
               <div class="band-bar-track">
-                <div class="band-bar-fill" id="bandFillTheta" style="background:var(--blue-neural);width:35%;"></div>
+                <div class="band-bar-fill" id="bandFillTheta" style="background:var(--blue-neural);width:0%;"></div>
               </div>
-              <div class="band-power-val" id="bandValTheta">18%</div>
+              <div class="band-power-val" id="bandValTheta">n/a</div>
             </div>
             <div class="band-row">
               <div class="band-name" style="color:var(--teal-neon);font-weight:700;">Mu / Alpha (8 – 12 Hz)</div>
               <div class="band-bar-track">
-                <div class="band-bar-fill" id="bandFillAlpha" style="background:var(--teal-neon);box-shadow:0 0 10px var(--teal-neon);width:65%;"></div>
+                <div class="band-bar-fill" id="bandFillAlpha" style="background:var(--teal-neon);box-shadow:0 0 10px var(--teal-neon);width:0%;"></div>
               </div>
-              <div class="band-power-val" id="bandValAlpha" style="color:var(--teal-neon);font-weight:700;">45%</div>
+              <div class="band-power-val" id="bandValAlpha" style="color:var(--teal-neon);font-weight:700;">n/a</div>
             </div>
             <div class="band-row">
               <div class="band-name">Beta (12 – 30 Hz)</div>
               <div class="band-bar-track">
-                <div class="band-bar-fill" id="bandFillBeta" style="background:var(--amber-warning);width:40%;"></div>
+                <div class="band-bar-fill" id="bandFillBeta" style="background:var(--amber-warning);width:0%;"></div>
               </div>
-              <div class="band-power-val" id="bandValBeta">20%</div>
+              <div class="band-power-val" id="bandValBeta">n/a</div>
             </div>
             <div class="band-row">
               <div class="band-name">Gamma (30 – 45 Hz)</div>
               <div class="band-bar-track">
-                <div class="band-bar-fill" id="bandFillGamma" style="background:var(--violet-electric);width:15%;"></div>
+                <div class="band-bar-fill" id="bandFillGamma" style="background:var(--violet-electric);width:0%;"></div>
               </div>
-              <div class="band-power-val" id="bandValGamma">5%</div>
+              <div class="band-power-val" id="bandValGamma">n/a</div>
             </div>
           </div>
 
@@ -3122,47 +3126,32 @@ function drawSingleChannelTrace() {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
   ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
 
-  // Synthetic or real trace for selected channel
-  const currentRecord = records[currentIdx];
-  const trace = (currentRecord && currentRecord.waveform && currentRecord.waveform[0]) || [];
-
-  ctx.save();
-  ctx.strokeStyle = '#00F5D4';
-  ctx.lineWidth = 2;
-  ctx.shadowColor = '#00F5D4';
-  ctx.shadowBlur = 10;
-  ctx.beginPath();
-  if (trace.length) {
-    trace.forEach((v, idx) => {
-      const x = (idx / (trace.length - 1)) * w;
-      const y = h/2 - v * (h * 0.35);
-      idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-  } else {
-    for (let x = 0; x < w; x += 4) {
-      const y = h/2 + Math.sin(x * 0.08 + Date.now()*0.005) * 20;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
+  const rec = records[currentIdx];
+  const names = (logData && logData.channel_names) || [];
+  const ci = names.indexOf(selectedChannelName);
+  const trace = (rec && rec.waveform && ci >= 0 && rec.waveform[ci]) || [];
+  if (!trace.length) {
+    ctx.fillStyle = '#7f8ea3'; ctx.font = '12px "IBM Plex Mono", monospace'; ctx.textAlign = 'left';
+    ctx.fillText(names.length ? 'No stored trace for ' + selectedChannelName + ' (stored: ' + names.join(', ') + ')' : 'No stored waveform in this session', 14, 24);
+    return;
   }
+  ctx.save();
+  ctx.strokeStyle = '#00F5D4'; ctx.lineWidth = 2; ctx.shadowColor = '#00F5D4'; ctx.shadowBlur = 10;
+  ctx.beginPath();
+  trace.forEach((v, idx) => {
+    const x = (idx / (trace.length - 1)) * w;
+    const y = h/2 - v * (h * 0.16);
+    idx === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
   ctx.stroke();
   ctx.restore();
 }
 
 function updateChannelBands(record) {
-  // Update frequency power bars dynamically
-  const isMotorImagery = (record.predicted_class === 'left' || record.predicted_class === 'right' || record.predicted_class === 'both_fists');
-  const alphaPower = isMotorImagery ? 25 : 55; // Mu ERD suppression
-  const betaPower  = isMotorImagery ? 45 : 20;
-
-  document.getElementById('bandFillAlpha').style.width = alphaPower + '%';
-  document.getElementById('bandValAlpha').textContent = alphaPower + '%';
-
-  document.getElementById('bandFillBeta').style.width = betaPower + '%';
-  document.getElementById('bandValBeta').textContent = betaPower + '%';
+  // Band power is not computed: the stored windows are z-scored and downsampled, so any value shown here would be made up.
 }
 
 /* ================================================================
@@ -3412,7 +3401,7 @@ async function loadFingerDemo(k) {
     const tasks = await (await fetch(`${API_BASE}/api/tasks`)).json();
     if (tasks && tasks['finger_' + k]) {
       const res = await fetch(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`);
-      if (res.ok) { data = await res.json(); name = (data.meta && data.meta.model_id) || 'finger replay'; }
+      if (res.ok) { data = await res.json(); name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : ''); }
     }
   } catch (e) { data = null; }
   if (!data) data = buildSimulatedFingerSession(k);
@@ -3463,7 +3452,7 @@ function updateFingerInset(cmd) {
     g.classList.toggle('dim', active.indexOf(f.k) < 0);
     document.getElementById('fil-' + f.k).classList.toggle('on', f.k === cmd);
   });
-  document.getElementById('fiNote').textContent = (logData && logData.meta && logData.meta.simulated) ? 'SIMULATED DEMO · not decoded from EEG' : '';
+  document.getElementById('fiNote').textContent = (logData && logData.meta && logData.meta.simulated) ? 'SIMULATED DEMO · not decoded from EEG' : ((logData && logData.meta && logData.meta.training_note) || '');
 }
 let PRESET_MODE = 'ME';   // ME = executed movement, MI = imagined movement
 function setPresetMode(m) {
@@ -3484,7 +3473,7 @@ async function loadPresetTask(taskKey) {
     if (!res) res = await fetch(TASK_FILES[taskKey]);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials';
+    if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
     hideLoading();
     setupSession(data, taskKey, name);
     switchTab('decoder');

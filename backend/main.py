@@ -50,13 +50,47 @@ MAX_CSV_BYTES = int(os.environ.get("NEUROBOT_MAX_CSV_MB", "25")) * 1024 * 1024
 # The two logs below are the earlier ones (window-level split); data/replay_index.json says what they are.
 LEGACY_LOGS = {"left_right": "inference_log_left_right.json", "fists_feet": "inference_log_fists_feet.json"}
 TASK_LABEL_ORDER = {"left_right": ["left", "rest", "right"], "fists_feet": ["both_fists", "rest", "both_feet"]}
+# Finger tasks are replay-only: they appear once a replay_finger_{k}_{mode}.json exists in data/ (written by the finger export notebook).
+FINGER_LABEL_ORDER = {"finger_2": ["thumb", "pinky"], "finger_3": ["thumb", "index", "pinky"]}
+ALL_TASKS = {**TASK_LABEL_ORDER, **FINGER_LABEL_ORDER}
+
+
+def _ping_external(url: str):
+    import urllib.request
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "NeuroBot-InternalKeepAlive/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            log.info("Keep-alive self ping -> HTTP %d", resp.getcode())
+    except Exception as exc:
+        log.warning("Keep-alive self ping notice: %s", exc)
+
+
+async def _keep_alive_task():
+    # Only active if running on Render or explicitly enabled
+    if os.environ.get("RENDER") != "true" and os.environ.get("NEUROBOT_KEEP_ALIVE") != "1":
+        return
+    url = os.environ.get("NEUROBOT_PUBLIC_URL", "https://neurobot-nrnn.onrender.com/api/health")
+    log.info("Started 24/7 internal keep-alive loop targeting %s", url)
+    # Wait 60s before initial ping so deployment finishes completely
+    await asyncio.sleep(60)
+    while True:
+        try:
+            await asyncio.to_thread(_ping_external, url)
+        except Exception as e:
+            log.debug("Keep-alive task error: %s", e)
+        # Ping every 10 minutes (600 seconds) - safely before Render's 15 min sleep window
+        await asyncio.sleep(600)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     model_registry.load()
     log.info("loaded %d model(s); problems: %s", model_registry.n_models(), model_registry.load_errors() or "none")
-    yield
+    task = asyncio.create_task(_keep_alive_task())
+    try:
+        yield
+    finally:
+        task.cancel()
 
 
 app = FastAPI(title="NeuroBot API", version=VERSION, lifespan=lifespan)
@@ -76,7 +110,8 @@ def _replay_index() -> dict:
 def _replay_candidates(task: str, mode: Optional[str]):
     modes = [mode] if mode else list(model_registry.MODES)
     files = [(f"replay_{task}_{m}.json", m) for m in modes]
-    files.append((LEGACY_LOGS[task], None))
+    if task in LEGACY_LOGS:
+        files.append((LEGACY_LOGS[task], None))
     return files
 
 
@@ -141,6 +176,12 @@ def list_tasks():
             "models": {m: model_registry.has_model(task, m) for m in model_registry.MODES},
             "replays": replays,
         }
+    for task, order in FINGER_LABEL_ORDER.items():
+        replays = [{"file": f, "mode": m, "source": None} for f, m in _replay_candidates(task, None)
+                   if os.path.exists(os.path.join(DATA_DIR, f))]
+        if replays:
+            out[task] = {"available": True, "file": replays[0]["file"], "label_order": order,
+                         "models": {m: False for m in model_registry.MODES}, "replays": replays, "replay_only": True}
     return out
 
 
@@ -177,8 +218,8 @@ def predict(req: PredictRequest):
 
 @app.get("/api/replay/log/{task}")
 def get_replay_log(task: str, mode: Optional[ModeName] = None):
-    if task not in LEGACY_LOGS:
-        raise HTTPException(status_code=404, detail=f"Unknown task '{task}'. Valid: {list(LEGACY_LOGS)}")
+    if task not in ALL_TASKS:
+        raise HTTPException(status_code=404, detail=f"Unknown task '{task}'. Valid: {list(ALL_TASKS)}")
     return _load_replay(task, mode)
 
 
@@ -186,8 +227,8 @@ def get_replay_log(task: str, mode: Optional[ModeName] = None):
 async def ws_replay(websocket: WebSocket, task: str, mode: Optional[str] = None):
     await websocket.accept()
     try:
-        if task not in LEGACY_LOGS or mode not in (None, "ME", "MI"):
-            await websocket.send_json({"error": f"Unknown task or mode. Valid tasks: {list(LEGACY_LOGS)}"})
+        if task not in ALL_TASKS or mode not in (None, "ME", "MI"):
+            await websocket.send_json({"error": f"Unknown task or mode. Valid tasks: {list(ALL_TASKS)}"})
             await websocket.close()
             return
         try:

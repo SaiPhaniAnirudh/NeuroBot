@@ -1,0 +1,126 @@
+{
+ "models": [
+  {
+   "id": "tcformer-finger2-s01-me",
+   "task": "finger_2",
+   "mode": "ME",
+   "arch": "tcformer",
+   "title": "TCFormer, finger dataset subject S01, 2 fingers, executed movement",
+   "label_order": [
+    "thumb",
+    "pinky"
+   ],
+   "onnx_path": "tcformer-finger2-s01-me.onnx",
+   "output": "logits",
+   "input_shape": [
+    128,
+    100
+   ],
+   "sampling_rate_hz": 100,
+   "trained_on": "Finger dataset (KiltHub) subject S01, ME specialist, own earlier sessions only, seed 0, no cross-subject pretraining (25 epochs per stage)",
+   "variant": "baseline",
+   "protocol": "chronological, trial-level, session-held-out (pretrain on earlier sessions, fine-tune on first 30% of the last session, evaluate on the rest)",
+   "warning": "Personal model of subject S01: 128-channel BioSemi recordings resampled to 100 Hz; meaningless for other people or other EEG caps.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.7745535714285714,
+    "n_heldout_trials": 448,
+    "per_window_accuracy": 0.6963069669984285,
+    "chance": 0.5,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 5.513429641723633e-07
+   }
+  },
+  {
+   "id": "tcformer-finger2-s01-mi",
+   "task": "finger_2",
+   "mode": "MI",
+   "arch": "tcformer",
+   "title": "TCFormer, finger dataset subject S01, 2 fingers, imagined movement",
+   "label_order": [
+    "thumb",
+    "pinky"
+   ],
+   "onnx_path": "tcformer-finger2-s01-mi.onnx",
+   "output": "logits",
+   "input_shape": [
+    128,
+    100
+   ],
+   "sampling_rate_hz": 100,
+   "trained_on": "Finger dataset (KiltHub) subject S01, MI specialist, own earlier sessions only, seed 0, no cross-subject pretraining (25 epochs per stage)",
+   "variant": "baseline",
+   "protocol": "chronological, trial-level, session-held-out (pretrain on earlier sessions, fine-tune on first 30% of the last session, evaluate on the rest)",
+   "warning": "Personal model of subject S01: 128-channel BioSemi recordings resampled to 100 Hz; meaningless for other people or other EEG caps.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.6941964285714286,
+    "n_heldout_trials": 448,
+    "per_window_accuracy": 0.6349600942038467,
+    "chance": 0.5,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 5.960464477539062e-07
+   }
+  },
+  {
+   "id": "tcformer-finger3-s01-me",
+   "task": "finger_3",
+   "mode": "ME",
+   "arch": "tcformer",
+   "title": "TCFormer, finger dataset subject S01, 3 fingers, executed movement",
+   "label_order": [
+    "thumb",
+    "index",
+    "pinky"
+   ],
+   "onnx_path": "tcformer-finger3-s01-me.onnx",
+   "output": "logits",
+   "input_shape": [
+    128,
+    100
+   ],
+   "sampling_rate_hz": 100,
+   "trained_on": "Finger dataset (KiltHub) subject S01, ME specialist, own earlier sessions only, seed 0, no cross-subject pretraining (25 epochs per stage)",
+   "variant": "baseline",
+   "protocol": "chronological, trial-level, session-held-out (pretrain on earlier sessions, fine-tune on first 30% of the last session, evaluate on the rest)",
+   "warning": "Personal model of subject S01: 128-channel BioSemi recordings resampled to 100 Hz; meaningless for other people or other EEG caps.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.5416666666666666,
+    "n_heldout_trials": 336,
+    "per_window_accuracy": 0.47954545454545455,
+    "chance": 0.3333333333333333,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 2.384185791015625e-07
+   }
+  },
+  {
+   "id": "tcformer-finger3-s01-mi",
+   "task": "finger_3",
+   "mode": "MI",
+   "arch": "tcformer",
+   "title": "TCFormer, finger dataset subject S01, 3 fingers, imagined movement",
+   "label_order": [
+    "thumb",
+    "index",
+    "pinky"
+   ],
+   "onnx_path": "tcformer-finger3-s01-mi.onnx",
+   "output": "logits",
+   "input_shape": [
+    128,
+    100
+   ],
+   "sampling_rate_hz": 100,
+   "trained_on": "Finger dataset (KiltHub) subject S01, MI specialist, own earlier sessions only, seed 0, no cross-subject pretraining (25 epochs per stage)",
+   "variant": "baseline",
+   "protocol": "chronological, trial-level, session-held-out (pretrain on earlier sessions, fine-tune on first 30% of the last session, evaluate on the rest)",
+   "warning": "Personal model of subject S01: 128-channel BioSemi recordings resampled to 100 Hz; meaningless for other people or other EEG caps.",
+   "evaluation": {
+    "majority_vote_accuracy": 0.43452380952380953,
+    "n_heldout_trials": 336,
+    "per_window_accuracy": 0.4098761123713139,
+    "chance": 0.3333333333333333,
+    "seed": 0,
+    "onnx_vs_torch_max_abs_diff": 1.7881393432617188e-07
+   }
+  }
+ ]
+}

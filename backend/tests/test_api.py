@@ -25,7 +25,8 @@ def test_models_endpoint_has_evaluation_and_no_paths(client):
 
 def test_tasks_lists_labels_models_and_replays(client):
     t = client.get("/api/tasks").json()
-    assert set(t) == {"left_right", "fists_feet"}
+    assert {"left_right", "fists_feet"} <= set(t) and set(t) <= {"left_right", "fists_feet", "finger_2", "finger_3"}
+    assert all(t[k].get("replay_only") for k in t if k.startswith("finger"))   # finger tasks have replays but no live model
     assert t["left_right"]["available"] and t["left_right"]["models"] == {"ME": True, "MI": True}
     assert t["left_right"]["label_order"] == ["left", "rest", "right"]
     assert t["left_right"]["replays"][0]["file"] == "replay_left_right_ME.json"
@@ -65,7 +66,7 @@ def test_predict_is_deterministic_and_modes_differ(client):
     {"window": [[0.0, 1.0], [1.0]]},
     {"window": window_payload(), "task": "nonsense"},
     {"window": window_payload(), "mode": "XX"},
-])
+], ids=["63_channels", "159_samples", "ragged", "bad_task", "bad_mode"])
 def test_predict_rejects_bad_input(client, body):
     assert client.post("/api/predict", json=body).status_code == 422
 
@@ -134,7 +135,7 @@ def test_csv_header_order_is_respected(client):
     (b"", 422),
     (_csv(seconds=0.5), 422),         # shorter than one window
     (b"a,b\n1,x\n2,3\n", 422),        # non-numeric
-], ids=["wrong_channels", "empty", "too_short", "non_numeric"])
+], ids=["32_channels", "empty_bytes", "short_window", "non_numeric"])
 def test_csv_rejects_bad_files(client, payload, code):
     assert client.post("/api/upload/csv", files={"file": ("x.csv", payload)}).status_code == code
 
