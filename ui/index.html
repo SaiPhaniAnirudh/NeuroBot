@@ -1718,7 +1718,7 @@ body::after {
 /* ================================================================
    APPLICATION STATE
    ================================================================ */
-const API_BASE = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8000';
+const API_BASE = window.NEUROBOT_API_URL || localStorage.getItem('NEUROBOT_API_URL') || ((window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8000');
 let activeTab = 'decoder';
 
 let logData = null;

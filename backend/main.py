@@ -66,10 +66,14 @@ def _ping_external(url: str):
 
 
 async def _keep_alive_task():
-    # Only active if running on Render or explicitly enabled
-    if os.environ.get("RENDER") != "true" and os.environ.get("NEUROBOT_KEEP_ALIVE") != "1":
+    # Active if running on Render, Hugging Face Spaces, or explicitly enabled
+    is_hf = os.environ.get("SPACE_ID") is not None
+    if os.environ.get("RENDER") != "true" and not is_hf and os.environ.get("NEUROBOT_KEEP_ALIVE") != "1":
         return
-    url = os.environ.get("NEUROBOT_PUBLIC_URL", "https://neurobot-nrnn.onrender.com/api/health")
+    default_url = "https://neurobot-nrnn.onrender.com/api/health"
+    if os.environ.get("SPACE_HOST"):
+        default_url = f"https://{os.environ.get('SPACE_HOST')}/api/health"
+    url = os.environ.get("NEUROBOT_PUBLIC_URL", default_url)
     log.info("Started 24/7 internal keep-alive loop targeting %s", url)
     # Wait 60s before initial ping so deployment finishes completely
     await asyncio.sleep(60)

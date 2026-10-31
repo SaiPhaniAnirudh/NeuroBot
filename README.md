@@ -1,4 +1,15 @@
+---
+title: NeuroBot
+emoji: 🧠
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # NeuroBot
+
 
 EEG-based movement-intention decoding (PhysioNet eegmmidb, 64 channels) with a software-only
 three-tier application: a FastAPI backend that serves ONNX models, and a browser Decode Console

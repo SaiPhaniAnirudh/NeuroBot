@@ -16,8 +16,10 @@ jobs:
       - name: Ping NeuroBot Endpoints with Cold-Start Resilience
         run: |
           set +e  # Do not exit immediately on non-zero exit codes during retries
-          TARGET_URL="https://neurobot-nrnn.onrender.com/api/health"
-          UI_URL="https://neurobot-nrnn.onrender.com/"
+          # Default target can be set via GitHub Secret NEUROBOT_URL or edit directly below:
+          BASE_URL="${{ secrets.NEUROBOT_URL || 'https://neurobot-nrnn.onrender.com' }}"
+          TARGET_URL="${BASE_URL%/}/api/health"
+          UI_URL="${BASE_URL%/}/"
           MAX_ATTEMPTS=3
           SLEEP_BETWEEN=15
           SUCCESS=0
