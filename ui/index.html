@@ -82,7 +82,6 @@ body::before {
     radial-gradient(ellipse 900px 600px at 15% 15%, rgba(0, 245, 212, 0.07), transparent 70%),
     radial-gradient(ellipse 800px 500px at 85% 25%, rgba(58, 134, 255, 0.08), transparent 70%),
     radial-gradient(ellipse 700px 450px at 50% 85%, rgba(157, 78, 221, 0.06), transparent 70%);
-  animation: bgShift 28s ease-in-out infinite alternate;
 }
 
 body::after {
@@ -95,12 +94,6 @@ body::after {
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
   background-size: 36px 36px;
   pointer-events: none;
-}
-
-@keyframes bgShift {
-  0% { transform: scale(1) translate(0, 0); }
-  50% { transform: scale(1.05) translate(-20px, -15px); }
-  100% { transform: scale(1) translate(15px, 20px); }
 }
 
 /* ================================================================
@@ -127,8 +120,7 @@ body::after {
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  position: sticky;
-  top: 14px;
+  position: relative;
   z-index: 100;
   flex-wrap: wrap;
 }
@@ -3038,21 +3030,15 @@ function animateRobot() {
     if (ankle && tAnkle) ankle.rotation.x += (tAnkle.rotX - ankle.rotation.x) * sp;
   });
 
-  // Natural Humanoid Floating Breathing Micro-Motion
+  // Robot remains steady and anchored to the dais
   if (robotGroup) {
-    robotGroup.position.y = Math.sin(Date.now() * 0.0015) * 0.025;
+    robotGroup.position.y = 0;
   }
 
-  // Arc Reactor Core Rotation
+  // Reactor core and glow remain steady
   if (limbs.reactorCore) {
-    limbs.reactorCore.rotation.z += 0.02;
+    limbs.reactorCore.rotation.z = 0;
   }
-
-  // Glow conduits pulse
-  const baseIntensity = limbTargets.glowIntensity || 1.0;
-  glowMaterials.forEach(mat => {
-    mat.emissiveIntensity += ((baseIntensity + Math.sin(Date.now() * 0.003) * 0.2) - mat.emissiveIntensity) * 0.1;
-  });
 
   robotRenderer.render(robotScene, robotCamera);
 }
