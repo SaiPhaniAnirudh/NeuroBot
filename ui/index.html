@@ -100,9 +100,9 @@ body::after {
    LAYOUT SHELL
    ================================================================ */
 .app-container {
-  max-width: 1440px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 20px 24px 60px;
+  padding: 12px 18px 40px;
 }
 
 /* ================================================================
@@ -112,14 +112,14 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 14px 22px;
-  margin-bottom: 24px;
+  gap: 16px;
+  padding: 8px 18px;
+  margin-bottom: 14px;
   background: var(--bg-surface);
   backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   position: relative;
   z-index: 100;
   flex-wrap: wrap;
@@ -128,17 +128,17 @@ body::after {
 .brand-section {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
 
 .brand-icon-box {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(135deg, var(--teal-neon), var(--blue-neural));
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.35);
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,10 +147,10 @@ body::after {
 }
 
 .brand-icon-inner {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border: 2px solid #050811;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   transform: rotate(45deg);
   position: relative;
@@ -158,25 +158,25 @@ body::after {
 .brand-icon-inner::after {
   content: "";
   position: absolute;
-  inset: 3px;
+  inset: 2px;
   background: #050811;
-  border-radius: 2px;
+  border-radius: 1px;
 }
 
 .brand-title {
-  font-size: 21px;
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
   color: #FFF;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .brand-title-badge {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
   background: rgba(0, 245, 212, 0.12);
   border: 1px solid rgba(0, 245, 212, 0.35);
   color: var(--teal-neon);
@@ -184,7 +184,7 @@ body::after {
   text-transform: uppercase;
 }
 .brand-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
   margin-top: 1px;
 }
@@ -193,9 +193,9 @@ body::after {
 .nav-tabs {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: rgba(12, 19, 32, 0.8);
-  padding: 5px;
+  padding: 4px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line-subtle);
 }
@@ -203,13 +203,13 @@ body::after {
 .nav-tab-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -327,9 +327,9 @@ body::after {
   background: var(--bg-surface);
   backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-lg);
-  padding: 22px 24px;
-  margin-bottom: 22px;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
   position: relative;
   overflow: hidden;
 }
@@ -338,9 +338,9 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .panel-title-wrap {
@@ -375,8 +375,8 @@ body::after {
    ================================================================ */
 .decoder-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 22px;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
 }
 
 @media(max-width: 1080px) {
@@ -389,16 +389,16 @@ body::after {
 .command-hero {
   background: linear-gradient(135deg, rgba(14, 24, 44, 0.8), rgba(9, 15, 28, 0.9));
   border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-lg);
-  padding: 22px 26px;
-  margin-bottom: 20px;
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  margin-bottom: 14px;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 12px;
 }
 
 .command-hero::before {
@@ -412,39 +412,39 @@ body::after {
 }
 
 .cmd-badge {
-  font-size: 10.5px;
-  letter-spacing: 1.2px;
+  font-size: 9.5px;
+  letter-spacing: 1px;
   font-weight: 700;
   color: var(--teal-neon);
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .cmd-name {
-  font-size: clamp(32px, 4.5vw, 48px);
+  font-size: clamp(24px, 3.2vw, 36px);
   font-weight: 800;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   line-height: 1.1;
   color: #FFF;
   transition: color 0.2s ease;
 }
 
 .cmd-meta {
-  font-size: 13px;
+  font-size: 11.5px;
   color: var(--text-dim);
-  margin-top: 8px;
+  margin-top: 4px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .match-pill {
-  padding: 8px 18px;
+  padding: 6px 14px;
   border-radius: var(--radius-pill);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
   font-family: 'IBM Plex Mono', monospace;
   letter-spacing: 0.5px;
@@ -513,7 +513,7 @@ body::after {
 
 .robot-stage-canvas {
   width: 100%;
-  height: 520px;
+  height: clamp(300px, 42vh, 420px);
   position: relative;
   background: radial-gradient(ellipse at 50% 35%, #1c2b42 0%, #0d1827 50%, #070d17 100%);
   border-bottom: 1px solid var(--line-subtle);
@@ -675,34 +675,34 @@ body::after {
 
 /* Waveform Canvas & Controls */
 .waveform-panel {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 #waveCanvas {
   display: block;
   width: 100%;
-  height: 220px;
+  height: 140px;
   background: #060A13;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line-subtle);
 }
 
 .playback-cockpit {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 
 .ctrl-btn {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-sm);
   background: var(--bg-surface-elevated);
   border: 1px solid var(--line-subtle);
   color: var(--text-main);
-  font-size: 15px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1374,7 +1374,7 @@ body::after {
             <span class="panel-tag mono" id="sourceBadge">Source: Bundled Sample</span>
           </div>
 
-          <canvas id="waveCanvas" height="220"></canvas>
+          <canvas id="waveCanvas" height="140"></canvas>
 
           <div class="playback-cockpit">
             <button class="ctrl-btn" id="playBtn" onclick="togglePlay()" title="Play / Pause">▶</button>
@@ -2032,7 +2032,7 @@ function resizeWaveCanvas() {
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width * (window.devicePixelRatio || 1);
-  canvas.height = 220 * (window.devicePixelRatio || 1);
+  canvas.height = 140 * (window.devicePixelRatio || 1);
   const ctx = canvas.getContext('2d');
   ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
   if (records[currentIdx]) {
@@ -2096,7 +2096,7 @@ function initRobot() {
   robotInited = true;
 
   robotScene = new THREE.Scene();
-  robotCamera = new THREE.PerspectiveCamera(35, container.clientWidth / container.clientHeight, 0.1, 100);
+  robotCamera = new THREE.PerspectiveCamera(38, container.clientWidth / container.clientHeight, 0.1, 100);
   robotCamera.position.copy(cameraTarget.pos);
   robotCamera.lookAt(currentLook);
 
@@ -2775,18 +2775,18 @@ function setRobotView(mode) {
   });
 
   if (mode === 'arms') {
-    cameraTarget.pos.set(0, 0.45, 4.2);
-    cameraTarget.look.set(0, 0.40, 0);
+    cameraTarget.pos.set(0, 0.20, 5.4);
+    cameraTarget.look.set(0, 0.20, 0);
   } else if (mode === 'legs') {
-    cameraTarget.pos.set(0, -1.35, 4.4);
-    cameraTarget.look.set(0, -1.40, 0);
+    cameraTarget.pos.set(0, -1.25, 5.2);
+    cameraTarget.look.set(0, -1.25, 0);
   } else if (mode === 'fingers') {
-    cameraTarget.pos.set(0, 0.5, 3.1);
-    cameraTarget.look.set(0, 0.5, 0.8);
+    cameraTarget.pos.set(0, 0.35, 3.8);
+    cameraTarget.look.set(0, 0.35, 0.6);
   } else {
     // 'all' Full Humanoid Body Centered View
-    cameraTarget.pos.set(0, 0.15, 5.8);
-    cameraTarget.look.set(0, 0.15, 0);
+    cameraTarget.pos.set(0, -0.15, 6.8);
+    cameraTarget.look.set(0, -0.15, 0);
   }
   orbitRotation.yaw = 0;
   orbitRotation.pitch = 0;
