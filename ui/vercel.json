@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "https://energyvenom-neurobot.hf.space/api/:match*"
+    }
+  ]
+}
