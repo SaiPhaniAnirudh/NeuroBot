@@ -10,6 +10,9 @@ pinned: false
 
 # NeuroBot
 
+- Code: https://github.com/SaiPhaniAnirudh/NeuroBot
+- Frontend: https://neurobot-ui.vercel.app/ (Vercel)
+- Backend: https://huggingface.co/spaces/EnergyVenom/neurobot (Hugging Face Space; the first request after an idle period is slow)
 
 EEG-based movement-intention decoding (PhysioNet eegmmidb, 64 channels) with a software-only
 three-tier application: a FastAPI backend that serves ONNX models, and a browser Decode Console
@@ -70,16 +73,17 @@ Rules the server follows:
 * Preprocessing matches training: common average reference, 4-40 Hz zero-phase FIR (fixed taps equal to
   MNE's filter; checked against MNE in the tests), 1 s windows every 125 ms, per-window z-score.
 
-## Deploy on Render
+## Deployment
 
-`render.yaml` is included (free web service, health check `/api/health`).
-- **Build Command**: `pip install -r backend/requirements.txt`
-- **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **24/7 Keep-Alive**: Multi-tier keep-alive system to prevent Render free instance from sleeping:
-  1. **Internal Server Keep-Alive**: FastAPI background task pings the public health endpoint every 10 min when running on Render (`RENDER=true`).
-  2. **GitHub Actions 24/7 Workflow**: `.github/workflows/keep-alive.yml` pings the `/api/health` and UI root on schedule and on push with cold-start retry resilience.
-  3. **Client-Side Heartbeat**: Decode Console frontend pings `/api/health` while active.
-  4. **Standalone Script**: `scripts/keep_alive.py` available for local background runners.
+The project runs as two parts, both free:
+
+* **Frontend (Decode Console):** Vercel, https://neurobot-ui.vercel.app/ (static files from `ui/`, configured in `vercel.json`).
+* **Backend (FastAPI + ONNX Runtime):** Hugging Face Space, https://huggingface.co/spaces/EnergyVenom/neurobot (Docker Space, port 7860, built from `Dockerfile`).
+
+`vercel.json` forwards `/api/*` requests to the Space. WebSocket replay is not proxied by Vercel, so the console
+talks to the Space directly for `/ws/replay/{task}`. A free Space sleeps after a long idle period and wakes on the next
+request, so the first request can be slow. `.github/workflows/keep-alive.yml` pings `/api/health` every six hours.
+Memory is limited, so keep `NEUROBOT_MAX_SECONDS` (default 900) and the upload limits in mind.
 
 ## Known limits
 

@@ -55,46 +55,11 @@ FINGER_LABEL_ORDER = {"finger_2": ["thumb", "pinky"], "finger_3": ["thumb", "ind
 ALL_TASKS = {**TASK_LABEL_ORDER, **FINGER_LABEL_ORDER}
 
 
-def _ping_external(url: str):
-    import urllib.request
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "NeuroBot-InternalKeepAlive/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            log.info("Keep-alive self ping -> HTTP %d", resp.getcode())
-    except Exception as exc:
-        log.warning("Keep-alive self ping notice: %s", exc)
-
-
-async def _keep_alive_task():
-    # Active if running on Render, Hugging Face Spaces, or explicitly enabled
-    is_hf = os.environ.get("SPACE_ID") is not None
-    if os.environ.get("RENDER") != "true" and not is_hf and os.environ.get("NEUROBOT_KEEP_ALIVE") != "1":
-        return
-    default_url = "https://neurobot-nrnn.onrender.com/api/health"
-    if os.environ.get("SPACE_HOST"):
-        default_url = f"https://{os.environ.get('SPACE_HOST')}/api/health"
-    url = os.environ.get("NEUROBOT_PUBLIC_URL", default_url)
-    log.info("Started 24/7 internal keep-alive loop targeting %s", url)
-    # Wait 60s before initial ping so deployment finishes completely
-    await asyncio.sleep(60)
-    while True:
-        try:
-            await asyncio.to_thread(_ping_external, url)
-        except Exception as e:
-            log.debug("Keep-alive task error: %s", e)
-        # Ping every 10 minutes (600 seconds) - safely before Render's 15 min sleep window
-        await asyncio.sleep(600)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     model_registry.load()
     log.info("loaded %d model(s); problems: %s", model_registry.n_models(), model_registry.load_errors() or "none")
-    task = asyncio.create_task(_keep_alive_task())
-    try:
-        yield
-    finally:
-        task.cancel()
+    yield
 
 
 app = FastAPI(title="NeuroBot API", version=VERSION, lifespan=lifespan)
