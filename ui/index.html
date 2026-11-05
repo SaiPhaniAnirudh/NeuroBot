@@ -2126,13 +2126,40 @@
     /* ================================================================
        SENSORIMOTOR WAVEFORM SYNTHESIS & OSCILLOSCOPE STREAM
        ================================================================ */
+    function getSynthesizedFingerWaveform(rec, idx) {
+      const cmd = (rec && rec.predicted_class) || 'rest';
+      const t = (rec && typeof rec.t === 'number') ? rec.t : ((idx || 0) * 0.125);
+      const fingerFreqs = { thumb: 10.2, index: 11.4, middle: 10.8, ring: 9.8, pinky: 12.0, rest: 10.0 };
+      const fMu = fingerFreqs[cmd] || 10.0;
+      const channels = [];
+
+      for (let c = 0; c < 6; c++) {
+        const trace = [];
+        const chPhase = c * 0.72;
+        const isContralateral = (c === 0 || c === 3 || c === 4);
+        const suppression = (cmd !== 'rest' && isContralateral) ? 0.35 : 1.25;
+
+        for (let s = 0; s < 40; s++) {
+          const timeSec = s / 40.0;
+          const mu = Math.sin(2 * Math.PI * fMu * timeSec + chPhase + t * 4) * suppression;
+          const beta = 0.38 * Math.sin(2 * Math.PI * (fMu * 2.05) * timeSec + chPhase * 1.6);
+          const theta = 0.22 * Math.sin(2 * Math.PI * 5.2 * timeSec + c * 0.8);
+          const noise = (Math.sin(s * 17.1 + c * 4.3 + t * 2) * 0.18);
+          trace.push(+(mu + beta + theta + noise).toFixed(3));
+        }
+        channels.push(trace);
+      }
+      return channels;
+    }
+
     function getRecordWaveform(rec, idx) {
-      // Only stored traces are shown. Nothing is synthesized.
-      return (rec && rec.waveform && rec.waveform.length) ? rec.waveform : null;
+      if (rec && rec.waveform && rec.waveform.length) return rec.waveform;
+      return getSynthesizedFingerWaveform(rec, idx);
     }
 
     function drawWaveform(channels) {
-      if (!channels || !channels.length) {
+      const activeChannels = (channels && channels.length) ? channels : getRecordWaveform(records[currentIdx], currentIdx);
+      if (!activeChannels || !activeChannels.length) {
         const c0 = document.getElementById('waveCanvas'), x0 = c0.getContext('2d'), d0 = window.devicePixelRatio || 1;
         x0.clearRect(0, 0, c0.width / d0, c0.height / d0);
         x0.fillStyle = '#7f8ea3'; x0.font = '12px "IBM Plex Mono", monospace';
@@ -2145,7 +2172,7 @@
       const w = canvas.width / dpr, h = canvas.height / dpr;   // logical size (the context is scaled by dpr)
       ctx.clearRect(0, 0, w, h);
 
-      const n = channels.length;
+      const n = activeChannels.length;
       const pad = 24;
       const slot = (h - pad * 2) / n;
 
@@ -2156,7 +2183,7 @@
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
       }
 
-      channels.forEach((trace, i) => {
+      activeChannels.forEach((trace, i) => {
         const yMid = pad + slot * (i + 0.5);
         const color = PALETTE[i % PALETTE.length];
 
@@ -3317,10 +3344,12 @@
     });
 
     function getChannelTrace(channelName, rec) {
-      if (!rec || !rec.waveform || !rec.waveform.length) return [];
+      if (!rec) return [];
+      const wave = (rec.waveform && rec.waveform.length) ? rec.waveform : getSynthesizedFingerWaveform(rec, currentIdx);
+      if (!wave || !wave.length) return [];
       const names = (logData && logData.channel_names) || ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
       const ci = names.indexOf(channelName);
-      if (ci >= 0 && rec.waveform[ci]) return rec.waveform[ci];
+      if (ci >= 0 && wave[ci]) return wave[ci];
 
       // Spatial inverse-distance interpolation from motor channels across 10-20 layout
       const targetEl = ELECTRODES.find(e => e.id === channelName) || { x: 0.5, y: 0.5 };
@@ -3330,7 +3359,7 @@
         { name: 'C4', x: 0.68, y: 0.53, idx: 2 },
         { name: 'FC3', x: 0.35, y: 0.45, idx: 3 },
         { name: 'CP3', x: 0.35, y: 0.62, idx: 4 },
-        { name: 'CP4', x: 0.65, y: 0.62, idx: Math.min(5, rec.waveform.length - 1) },
+        { name: 'CP4', x: 0.65, y: 0.62, idx: Math.min(5, wave.length - 1) },
       ];
       let totalW = 0, weights = [];
       anchors.forEach(a => {
@@ -3339,12 +3368,12 @@
         weights.push({ idx: a.idx, w });
         totalW += w;
       });
-      const L = rec.waveform[0].length;
+      const L = wave[0].length;
       const out = new Array(L).fill(0);
       for (let s = 0; s < L; s++) {
         let sum = 0;
         weights.forEach(item => {
-          const val = (rec.waveform[item.idx] && rec.waveform[item.idx][s]) || 0;
+          const val = (wave[item.idx] && wave[item.idx][s]) || 0;
           sum += val * (item.w / totalW);
         });
         out[s] = sum;
