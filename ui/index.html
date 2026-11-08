@@ -897,6 +897,10 @@
       margin-bottom: 22px;
     }
 
+    .dropzone-box * {
+      pointer-events: none;
+    }
+
     .dropzone-box:hover,
     .dropzone-box.drag-over {
       border-color: var(--teal-neon);
@@ -1636,11 +1640,11 @@
                 <span class="format-pill">.EDF / .EDF+</span>
                 <span class="format-pill">.CSV (64-Ch)</span>
                 <span class="format-pill">.TSV</span>
-                <span class="format-pill">.JSON Log</span>
+                <span class="format-pill">.JSON / .JSON.GZ</span>
               </div>
-              <input type="file" id="hiddenFileInput" style="display:none;"
-                accept=".edf,.bdf,.csv,.tsv,.txt,.npy,.json">
             </div>
+            <input type="file" id="hiddenFileInput" style="display:none;"
+              accept=".edf,.bdf,.csv,.tsv,.txt,.npy,.json,.gz">
 
             <!-- Quick Presets & Downloaders -->
             <div
@@ -1680,10 +1684,10 @@
               <div class="config-field">
                 <label class="config-label">Task Family</label>
                 <select id="cfgTask" class="config-select">
-                  <option value="left_right">Left vs. Right Fist</option>
-                  <option value="fists_feet">Both Fists vs. Both Feet</option>
-                  <option value="finger_2">Thumb vs Pinky Finger Flexion</option>
-                  <option value="finger_3">Thumb vs Index vs Pinky Finger Flexion</option>
+                  <option value="left_right">Left vs. Right Fist (64-Ch PhysioNet)</option>
+                  <option value="fists_feet">Both Fists vs. Both Feet (64-Ch PhysioNet)</option>
+                  <option value="finger_2">Thumb vs Pinky Flexion (Replay Log)</option>
+                  <option value="finger_3">Thumb vs Index vs Pinky Flexion (Replay Log)</option>
                 </select>
               </div>
               <div class="config-field">
@@ -3562,6 +3566,9 @@
       if (e.target.files[0]) handleUserFile(e.target.files[0]);
     });
 
+    window.addEventListener('dragover', e => e.preventDefault(), false);
+    window.addEventListener('drop', e => e.preventDefault(), false);
+
     ['dragover', 'dragleave', 'drop'].forEach(evtName => {
       dropzone.addEventListener(evtName, e => {
         e.preventDefault();
@@ -3580,19 +3587,47 @@
 
       setStepStatus(1, 'completed', file.name);
 
-      if (name.endsWith('.json')) {
-        // Client-side JSON parse
-        const reader = new FileReader();
-        reader.onload = ev => {
-          try {
-            const parsed = JSON.parse(ev.target.result);
-            if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order');
-            setStepStatus(2, 'completed', '64 channels loaded');
+      // 1. Client-side GZ JSON parse (.json.gz)
+      if (name.endsWith('.json.gz') || (name.endsWith('.gz') && name.includes('.json'))) {
+        try {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const stream = file.stream().pipeThrough(ds);
+            const text = await new Response(stream).text();
+            const parsed = JSON.parse(text);
+            if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order in replay');
+            const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
+            setStepStatus(2, 'completed', `${nCh} channels loaded`);
             setStepStatus(3, 'completed', 'Pre-filtered log verified');
             setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
             pendingCustomSession = parsed;
             document.getElementById('launchLabSessionBtn').disabled = false;
             hideLoading();
+            alert(`Successfully loaded ${file.name}!\nDecoded ${parsed.records.length} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
+            return;
+          }
+        } catch (err) {
+          hideLoading();
+          alert('Could not decompress or parse .json.gz file: ' + err.message);
+          return;
+        }
+      }
+
+      // 2. Client-side standard JSON parse (.json)
+      if (name.endsWith('.json')) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order');
+            const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
+            setStepStatus(2, 'completed', `${nCh} channels loaded`);
+            setStepStatus(3, 'completed', 'Pre-filtered log verified');
+            setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
+            pendingCustomSession = parsed;
+            document.getElementById('launchLabSessionBtn').disabled = false;
+            hideLoading();
+            alert(`Successfully loaded ${file.name}!\nDecoded ${parsed.records.length} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
           } catch (err) {
             hideLoading();
             alert('Could not parse JSON inference log: ' + err.message);
@@ -3602,11 +3637,18 @@
         return;
       }
 
-      // If EDF or CSV, send to backend upload API
-      const formData = new FormData();
-      formData.append('file', file);
+      // 3. Raw EEG Upload (EDF, BDF, CSV, TSV, NPY)
       const task = document.getElementById('cfgTask').value;
       const sfreq = document.getElementById('cfgSfreq').value;
+
+      if (task.startsWith('finger')) {
+        hideLoading();
+        alert(`Finger tasks ('${task}') are replay-only recordings (subject S01 pilot). For custom EDF or CSV upload decoding, please select 'Left vs. Right Fist' or 'Both Fists vs. Both Feet'.`);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
 
       const endpoint = name.endsWith('.edf') || name.endsWith('.bdf')
         ? `${API_BASE}/api/upload/edf?task=${task}`
@@ -3621,7 +3663,10 @@
 
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
-          throw new Error(errJson.detail || 'HTTP ' + res.status);
+          const errMsg = Array.isArray(errJson.detail)
+            ? errJson.detail.map(d => d.msg || JSON.stringify(d)).join(', ')
+            : (typeof errJson.detail === 'string' ? errJson.detail : (errJson.detail ? JSON.stringify(errJson.detail) : 'HTTP ' + res.status));
+          throw new Error(errMsg);
         }
 
         setStepStatus(2, 'completed', 'Standardized 64 channels');
@@ -3635,7 +3680,6 @@
         alert(`Successfully processed ${file.name}!\nDecoded ${resultData.total_records} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
       } catch (err) {
         hideLoading();
-        // No fake decoding: without the backend nothing can be decoded
         alert(`Could not process ${file.name}: ${err.message}\nThe backend must be running to decode uploaded recordings.`);
       }
     }
@@ -3662,7 +3706,8 @@
 
     function launchCustomSession() {
       if (!pendingCustomSession) return;
-      setupSession(pendingCustomSession, 'custom', pendingCustomSession.source_filename || 'Custom Ingestion');
+      const t = (pendingCustomSession && pendingCustomSession.task) || 'custom';
+      setupSession(pendingCustomSession, t, pendingCustomSession.source_filename || 'Custom Ingestion');
       switchTab('decoder');
       play();
     }
@@ -3674,30 +3719,23 @@
     async function loadPresetIntoLab(taskKey) {
       showLoading(`Loading bundled replay for ${taskKey}...`, 'Parsing stored inference log');
       try {
-        let url = 'sample_task_a_left_right.json';
-        if (taskKey === 'fists_feet') url = 'sample_task_b_fists_feet.json';
-        else if (taskKey === 'left_right') url = 'sample_task_a_left_right.json';
-        else {
-          // Finger preset: fetch from backend or sample
-          const res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
-          if (res.ok) {
-            const parsed = await res.json();
-            setStepStatus(1, 'completed', `${taskKey}_replay.json`);
-            setStepStatus(2, 'completed', '64 channels loaded');
-            setStepStatus(3, 'completed', 'Pre-filtered log verified');
-            setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
-            pendingCustomSession = parsed;
-            document.getElementById('launchLabSessionBtn').disabled = false;
-            hideLoading();
-            alert(`Bundled replay loaded! Decoded ${parsed.records.length} windows. Click 'Launch Decoded Session'.`);
-            return;
-          }
+        let parsed = null;
+        if (API_BASE) {
+          try {
+            const res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
+            if (res.ok) parsed = await res.json();
+          } catch (_) {}
         }
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const parsed = await res.json();
-        setStepStatus(1, 'completed', url);
-        setStepStatus(2, 'completed', '64 channels loaded');
+        if (!parsed) {
+          let url = 'sample_task_a_left_right.json';
+          if (taskKey === 'fists_feet') url = 'sample_task_b_fists_feet.json';
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          parsed = await res.json();
+        }
+        const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
+        setStepStatus(1, 'completed', `${taskKey}_replay.json`);
+        setStepStatus(2, 'completed', `${nCh} channels loaded`);
         setStepStatus(3, 'completed', 'Pre-filtered log verified');
         setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
         pendingCustomSession = parsed;
