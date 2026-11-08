@@ -975,15 +975,6 @@
       transform: translateY(-2px);
     }
 
-    .preset-action-card.active {
-      border-color: var(--teal-neon) !important;
-      background: linear-gradient(135deg, rgba(0, 245, 212, 0.12), rgba(58, 134, 255, 0.12)) !important;
-      box-shadow: 0 0 12px rgba(0, 245, 212, 0.15) !important;
-    }
-    .preset-action-card.active .pac-title {
-      color: var(--teal-neon) !important;
-    }
-
     .pac-title {
       font-size: 13.5px;
       font-weight: 700;
@@ -1586,8 +1577,9 @@
                 <span>Movement type:</span><button class="fl-preset-btn active" id="btnModeME"
                   onclick="setPresetMode('ME')">Executed (ME)</button><button class="fl-preset-btn" id="btnModeMI"
                   onclick="setPresetMode('MI')">Imagined (MI)</button></div>
-              <button class="preset-action-card" id="taskBtnMaster" onclick="loadUnifiedMasterSession()">
-                <div class="pac-title">🌐 Composite Demo: Arms, Feet and Fingers</div>
+              <button class="preset-action-card" id="taskBtnMaster" onclick="loadUnifiedMasterSession()"
+                style="border-color:var(--teal-neon);background:linear-gradient(135deg, rgba(0,245,212,0.12), rgba(58,134,255,0.12));box-shadow:0 0 12px rgba(0,245,212,0.15);">
+                <div class="pac-title" style="color:var(--teal-neon);">🌐 Composite Demo: Arms, Feet and Fingers</div>
                 <div class="pac-desc">Plays short blocks from the stored Task A, Task B and finger replays back to back. Each block comes from a different model, so this is a composite, not one decoded session.</div>
               </button>
               <button class="preset-action-card" id="taskBtnLeftRight" onclick="loadPresetTask('left_right')">
@@ -1921,8 +1913,6 @@
     let playing = false;
     let playTimer = null;
     let currentTask = 'left_right';
-    let decodedFinger = null;
-    const REPLAY_CACHE = {};
 
     let selectedChannelName = 'C3';
     let selectedChannelIndex = 8;
@@ -1930,8 +1920,6 @@
     const TASK_FILES = {
       left_right: 'sample_task_a_left_right.json',
       fists_feet: 'sample_task_b_fists_feet.json',
-      finger_2: 'sample_finger_2.json',
-      finger_3: 'sample_finger_3.json',
     };
 
     const KNOWN_COLORS = {
@@ -1950,22 +1938,6 @@
     function displayName(label) {
       if (!label) return '—';
       return label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function updateActiveTaskButton(taskKey) {
-      const map = {
-        'master': 'taskBtnMaster',
-        'left_right': 'taskBtnLeftRight',
-        'fists_feet': 'taskBtnFistsFeet',
-        'finger_2': 'taskBtnFinger2',
-        'finger_3': 'taskBtnFinger3'
-      };
-      document.querySelectorAll('.preset-action-card').forEach(b => b.classList.remove('active'));
-      const btnId = map[taskKey];
-      if (btnId) {
-        const el = document.getElementById(btnId);
-        if (el) el.classList.add('active');
-      }
     }
 
     /* ================================================================
@@ -2000,7 +1972,6 @@
       records = data.records || [];
       labelOrder = data.label_order || ['left', 'rest', 'right'];
       currentTask = taskKey || 'custom';
-      updateActiveTaskButton(currentTask);
       if (!data.channel_names || !data.channel_names.length) {
         data.channel_names = ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
       }
@@ -2159,40 +2130,11 @@
     }
 
     /* ================================================================
-       SENSORIMOTOR WAVEFORM SYNTHESIS & OSCILLOSCOPE STREAM
+       STORED EEG TRACES AND MODEL-OUTPUT TIMELINE
+       Only traces stored in a replay log are drawn. Nothing is synthesized.
        ================================================================ */
-    function getSynthesizedFingerWaveform(rec, idx) {
-      const cmd = (rec && rec.predicted_class) || 'rest';
-      const t = (rec && typeof rec.t === 'number') ? rec.t : ((idx || 0) * 0.125);
-      const fingerFreqs = { thumb: 10.2, index: 11.4, middle: 10.8, ring: 9.8, pinky: 12.0, rest: 10.0 };
-      const fMu = fingerFreqs[cmd] || 10.0;
-      const channels = [];
-
-      for (let c = 0; c < 6; c++) {
-        const trace = [];
-        const chPhase = c * 0.72;
-        const isContralateral = (c === 0 || c === 3 || c === 4);
-        const suppression = (cmd !== 'rest' && isContralateral) ? 0.35 : 1.25;
-
-        for (let s = 0; s < 40; s++) {
-          const timeSec = s / 40.0;
-          const mu = Math.sin(2 * Math.PI * fMu * timeSec + chPhase + t * 4) * suppression;
-          const beta = 0.38 * Math.sin(2 * Math.PI * (fMu * 2.05) * timeSec + chPhase * 1.6);
-          const theta = 0.22 * Math.sin(2 * Math.PI * 5.2 * timeSec + c * 0.8);
-          const noise = (Math.sin(s * 17.1 + c * 4.3 + t * 2) * 0.18);
-          trace.push(+(mu + beta + theta + noise).toFixed(3));
-        }
-        channels.push(trace);
-      }
-      return channels;
-    }
-
     function getRecordWaveform(rec, idx) {
-      if (String(currentTask).startsWith('finger')) {
-        return getSynthesizedFingerWaveform(rec, idx);
-      }
-      if (rec && rec.waveform && rec.waveform.length) return rec.waveform;
-      return getSynthesizedFingerWaveform(rec, idx);
+      return (rec && rec.waveform && rec.waveform.length) ? rec.waveform : null;
     }
 
     function drawModelTimeline() {
@@ -2245,7 +2187,6 @@
     }
 
     function drawWaveform(channels) {
-      const isFinger = String(currentTask).startsWith('finger');
       const activeChannels = (channels && channels.length) ? channels : getRecordWaveform(records[currentIdx], currentIdx);
       const tEl = document.getElementById('eegPanelTitle');
       if (!activeChannels || !activeChannels.length) {
@@ -2254,13 +2195,9 @@
         return;
       }
       if (tEl) {
-        if (isFinger) {
-          tEl.textContent = 'EEG Signal Window (6 Channels, Sensorimotor µ/β Bandpass Filtered 4–40 Hz)';
-        } else {
-          const cm = logData && logData.meta && logData.meta.signal && logData.meta.signal.channel_mapping;
-          const cmText = cm ? ' · BioSemi ' + Object.keys(cm).map(k => String(cm[k]).split(' ')[0]).join('/') + ' as ' + Object.keys(cm).join('/') : '';
-          tEl.textContent = 'EEG Signal Window (' + activeChannels.length + ' channels, ' + (cm ? 'CAR' : 'common average referenced') + ', 4–40 Hz, stored at ' + activeChannels[0].length + ' Hz' + cmText + ')';
-        }
+        const cm = logData && logData.meta && logData.meta.signal && logData.meta.signal.channel_mapping;
+        const cmText = cm ? ' · BioSemi ' + Object.keys(cm).map(k => String(cm[k]).split(' ')[0]).join('/') + ' as ' + Object.keys(cm).join('/') : '';
+        tEl.textContent = 'EEG Signal Window (' + activeChannels.length + ' channels, ' + (cm ? 'CAR' : 'common average referenced') + ', 4–40 Hz, stored at ' + activeChannels[0].length + ' Hz' + cmText + ')';
       }
       const canvas = document.getElementById('waveCanvas');
       const ctx = canvas.getContext('2d');
@@ -2279,7 +2216,6 @@
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
       }
 
-      const FINGER_CH_NAMES = ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
       activeChannels.forEach((trace, i) => {
         const yMid = pad + slot * (i + 0.5);
         const color = PALETTE[i % PALETTE.length];
@@ -2292,7 +2228,7 @@
         ctx.fillStyle = '#7f8ea3';
         ctx.font = '10px "IBM Plex Mono", monospace';
         ctx.textAlign = 'left';
-        const chName = isFinger ? FINGER_CH_NAMES[i] : ((logData && logData.channel_names && logData.channel_names[i]) || ('Ch ' + (i + 1)));
+        const chName = (logData && logData.channel_names && logData.channel_names[i]) || ('Ch ' + (i + 1));
         ctx.fillText(chName, 12, yMid + 3.5);
 
         // Glowing trace
@@ -3441,17 +3377,8 @@
     });
 
     function getChannelTrace(channelName, rec) {
-      if (!rec) return [];
-      const isFinger = String(currentTask).startsWith('finger');
-      if (isFinger) {
-        const wave = getSynthesizedFingerWaveform(rec, currentIdx);
-        const names = ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
-        const ci = names.indexOf(channelName);
-        if (ci >= 0 && wave[ci]) return wave[ci];
-        return [];
-      }
       // Only channels stored in the replay log have a trace; other electrodes have none.
-      if (!rec.waveform || !rec.waveform.length) return [];
+      if (!rec || !rec.waveform || !rec.waveform.length) return [];
       const names = (logData && logData.channel_names) || [];
       const ci = names.indexOf(channelName);
       return (ci >= 0 && rec.waveform[ci]) ? rec.waveform[ci] : [];
@@ -3500,61 +3427,6 @@
       const head = document.getElementById('bandHeaderText');
       const trace = rec ? getChannelTrace(selectedChannelName, rec) : [];
       set('chanSnr', 'n/a');
-
-      if (String(currentTask).startsWith('finger')) {
-        const N = trace.length;
-        if (!N) {
-          set('chanRms', 'n/a'); set('chanP2p', 'n/a');
-          set('chanStatus', 'CALIBRATED');
-          return;
-        }
-        let sumSq = 0, minV = Infinity, maxV = -Infinity;
-        trace.forEach(v => {
-          sumSq += v * v;
-          if (v < minV) minV = v;
-          if (v > maxV) maxV = v;
-        });
-        const rmsUv = (Math.sqrt(sumSq / N) * 18.5).toFixed(1);
-        const p2pUv = ((maxV - minV) * 22.0).toFixed(1);
-        set('chanRms', `${rmsUv} µV`);
-        set('chanP2p', `${p2pUv} µV`);
-        set('chanStatus', 'CALIBRATED · ACTIVE');
-
-        const powerBins = [];
-        for (let k = 1; k < Math.floor(N / 2); k++) {
-          let re = 0, im = 0;
-          for (let n = 0; n < N; n++) {
-            const angle = (2 * Math.PI * k * n) / N;
-            re += trace[n] * Math.cos(angle);
-            im -= trace[n] * Math.sin(angle);
-          }
-          powerBins.push({ freq: (k * 40) / N, pwr: (re * re + im * im) / N });
-        }
-        let pDelta = 0, pTheta = 0, pAlpha = 0, pBeta = 0, pGamma = 0;
-        powerBins.forEach(b => {
-          if (b.freq < 4) pDelta += b.pwr;
-          else if (b.freq < 8) pTheta += b.pwr;
-          else if (b.freq < 12) pAlpha += b.pwr;
-          else if (b.freq < 20) pBeta += b.pwr;
-          else pGamma += b.pwr;
-        });
-        const tot = pDelta + pTheta + pAlpha + pBeta + pGamma || 1;
-        const setBand = (name, pwr) => {
-          const pct = Math.min(100, Math.max(5, Math.round((pwr / tot) * 100)));
-          const bar = document.getElementById(`bandFill${name}`);
-          const val = document.getElementById(`bandVal${name}`);
-          if (bar) bar.style.width = `${pct}%`;
-          if (val) val.textContent = `${pct}%`;
-        };
-        setBand('Delta', pDelta);
-        setBand('Theta', pTheta);
-        setBand('Alpha', pAlpha);
-        setBand('Beta', pBeta);
-        setBand('Gamma', pGamma);
-        if (head) head.textContent = 'Frequency Band Power Spectrum · Real-Time Sensorimotor Telemetry';
-        return;
-      }
-
       // Real relative band power, when the replay log stores it (computed from the full-rate window by the signal-export notebook).
       const names = (logData && logData.channel_names) || [];
       let col = -1, allMean = false;
@@ -3855,7 +3727,8 @@
           } catch (_) {}
         }
         if (!parsed) {
-          let url = TASK_FILES[taskKey] || 'sample_task_a_left_right.json';
+          let url = 'sample_task_a_left_right.json';
+          if (taskKey === 'fists_feet') url = 'sample_task_b_fists_feet.json';
           const res = await fetch(url);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           parsed = await res.json();
@@ -3887,6 +3760,7 @@
        PRESET TASKS (LEFT/RIGHT & FISTS/FEET)
        ================================================================ */
     /* ---- Finger decoding view (right hand: thumb / index / pinky as in the base paper's 2- and 3-finger tasks) ---- */
+    let decodedFinger = null;
     const FINGER_SETS = { 2: ['thumb', 'pinky'], 3: ['thumb', 'index', 'pinky'] };
     function buildSimulatedFingerSession(k) {
       const labels = FINGER_SETS[k], recs = []; let seed = 7 * k + 1;
@@ -3905,7 +3779,17 @@
       return { label_order: labels, meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
     }
     async function loadFingerDemo(k) {
-      await loadPresetTask('finger_' + k);
+      let data = null, name = 'SIMULATED DEMO · not decoded from EEG';
+      try {   // a real finger replay is used automatically once the backend serves one
+        const tasks = await (await fetch(`${API_BASE}/api/tasks`)).json();
+        if (tasks && tasks['finger_' + k]) {
+          const res = await fetch(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`);
+          if (res.ok) { data = await res.json(); name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : ''); }
+        }
+      } catch (e) { data = null; }
+      if (!data) data = buildSimulatedFingerSession(k);
+      setupSession(data, 'finger_' + k, name);
+      switchTab('decoder');
     }
     /* 2D close-up of the right hand; same finger order and proportions as the 3D robot hand (buildMetallicArm) */
     const FI_FINGERS = [{ k: 'thumb', n: 'Thumb', x: -0.19, y: 0.08, len: 0.20, rot: 26 }, { k: 'index', n: 'Index', x: -0.10, y: 0.26, len: 0.27 }, { k: 'middle', n: 'Middle', x: -0.03, y: 0.27, len: 0.30 }, { k: 'ring', n: 'Ring', x: 0.04, y: 0.26, len: 0.28 }, { k: 'pinky', n: 'Pinky', x: 0.11, y: 0.24, len: 0.23 }];
@@ -3917,8 +3801,8 @@
       st.textContent = '.fi-g{transform-box:fill-box;transform-origin:50% 0%;transition:transform .35s ease}.fi-g.on{transform:scaleY(.55)}.fi-g.dim{opacity:.4}.fi-s{fill:#2b4350;stroke:#4a6a7a;stroke-width:2;transition:fill .2s}.fi-g.on .fi-s{fill:#ff8a4c;stroke:#ff8a4c}.fi-j{fill:#c9a227}.fi-t{fill:#5fb0d6}.fi-l{font:12px sans-serif;fill:#9bb0ba;text-anchor:middle}.fi-l.on{fill:#ff8a4c;font-weight:700}';
       document.head.appendChild(st);
       const box = document.createElement('div'); box.id = 'fingerInset';
-      box.style.cssText = 'position:absolute;right:14px;top:14px;width:130px;background:rgba(8,16,26,.88);backdrop-filter:blur(8px);border:1px solid rgba(0,245,212,.35);border-radius:8px;padding:6px 8px;display:none;z-index:5;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.5);';
-      box.innerHTML = '<div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--teal-neon);margin-bottom:2px;text-transform:uppercase;">Bionic Digits</div><svg id="fiSvg" viewBox="0 0 300 330" style="width:100%;height:auto;display:block"><rect x="70" y="20" width="160" height="130" rx="14" fill="#223641" stroke="#4a6a7a" stroke-width="2"/></svg><div id="fiNote" style="font-size:9.5px;color:#ffb703;margin-top:2px"></div>';
+      box.style.cssText = 'position:absolute;left:12px;top:12px;width:210px;background:rgba(8,16,26,.96);border:1px solid rgba(0,245,212,.3);border-radius:10px;padding:8px;display:none;z-index:5;pointer-events:none';
+      box.innerHTML = '<div style="font-size:10px;letter-spacing:.08em;color:#7f8ea3;margin-bottom:2px">RIGHT HAND · FINGER CLOSE-UP</div><svg id="fiSvg" viewBox="0 0 300 330" style="width:100%;height:auto;display:block"><rect x="70" y="20" width="160" height="130" rx="14" fill="#223641" stroke="#4a6a7a" stroke-width="2"/></svg><div id="fiNote" style="font-size:10px;color:#ffb703;margin-top:2px"></div>';
       host.appendChild(box);
       const NS = 'http://www.w3.org/2000/svg', svg = box.querySelector('#fiSvg');
       const el = (n, a, p) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; };
@@ -3947,17 +3831,11 @@
       const active = (logData && logData.label_order) || [];
       FI_FINGERS.forEach(f => {
         const g = document.getElementById('fi-' + f.k);
-        if (g) {
-          g.classList.toggle('on', f.k === cmd);
-          g.classList.toggle('dim', active.indexOf(f.k) < 0);
-        }
-        const lbl = document.getElementById('fil-' + f.k);
-        if (lbl) lbl.classList.toggle('on', f.k === cmd);
+        g.classList.toggle('on', f.k === cmd);
+        g.classList.toggle('dim', active.indexOf(f.k) < 0);
+        document.getElementById('fil-' + f.k).classList.toggle('on', f.k === cmd);
       });
-      const fiNote = document.getElementById('fiNote');
-      if (fiNote) {
-        fiNote.textContent = (logData && logData.meta && logData.meta.simulated) ? 'SIMULATED DEMO · not decoded from EEG' : ((logData && logData.meta && logData.meta.training_note) || '');
-      }
+      document.getElementById('fiNote').textContent = (logData && logData.meta && logData.meta.simulated) ? 'SIMULATED DEMO · not decoded from EEG' : ((logData && logData.meta && logData.meta.training_note) || '');
     }
     let PRESET_MODE = 'ME';   // ME = executed movement, MI = imagined movement
     function setPresetMode(m) {
@@ -3971,63 +3849,21 @@
       }
     }
     async function loadPresetTask(taskKey) {
-      pause();
-      const taskNames = {
-        left_right: 'Left / Right Fist',
-        fists_feet: 'Both Fists & Feet',
-        finger_2: 'Fingers (Thumb vs. Pinky)',
-        finger_3: 'Fingers (Thumb, Index, Pinky)',
-      };
-      showLoading('Loading ' + (taskNames[taskKey] || taskKey) + ' replay...', 'Initializing sensorimotor telemetry');
-      updateActiveTaskButton(taskKey);
-
-      const cacheKey = `${taskKey}_${PRESET_MODE}`;
-      if (REPLAY_CACHE[cacheKey]) {
-        const cached = REPLAY_CACHE[cacheKey];
-        hideLoading();
-        setupSession(cached.data, taskKey, cached.name);
-        switchTab('decoder');
-        play();
-        return;
-      }
-
+      showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');
       try {
-        let res = null, name = TASK_FILES[taskKey] || 'replay';
+        // The replay of the exported model's held-out trials comes from the backend; the bundled sample file is only a fallback.
+        let res = null, name = TASK_FILES[taskKey];
         try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 3500);
-          res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`, { signal: controller.signal });
-          clearTimeout(timer);
+          res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
           if (res.ok) name = 'exported model replay (' + PRESET_MODE + ')'; else res = null;
         } catch (e) { res = null; }
-
-        let data = null;
-        if (res) {
-          data = await res.json();
-        } else if (TASK_FILES[taskKey]) {
-          const fallbackRes = await fetch(TASK_FILES[taskKey]);
-          if (fallbackRes.ok) {
-            data = await fallbackRes.json();
-          }
-        }
-
-        if (!data && taskKey.startsWith('finger_')) {
-          const k = parseInt(taskKey.split('_')[1]) || 2;
-          data = buildSimulatedFingerSession(k);
-          name = 'SIMULATED DEMO · not decoded from EEG';
-        }
-
-        if (!data) throw new Error('Could not load replay for ' + taskKey);
-
-        if (data.meta && data.meta.model_id) {
-          name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
-        }
-
-        REPLAY_CACHE[cacheKey] = { data, name };
+        if (!res) res = await fetch(TASK_FILES[taskKey]);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
         hideLoading();
         setupSession(data, taskKey, name);
         switchTab('decoder');
-        play();
       } catch (err) {
         hideLoading();
         alert('Could not auto-load dataset: ' + err.message);
@@ -4035,16 +3871,6 @@
     }
 
     async function loadUnifiedMasterSession() {
-      pause();
-      updateActiveTaskButton('master');
-      const cacheKey = `master_${PRESET_MODE}`;
-      if (REPLAY_CACHE[cacheKey]) {
-        const cached = REPLAY_CACHE[cacheKey];
-        setupSession(cached.data, 'master', cached.name);
-        switchTab('decoder');
-        play();
-        return;
-      }
       showLoading('Building composite replay...', 'Stored Task A, Task B and finger replays, played back to back');
       try {
         const parts = [
@@ -4056,18 +3882,9 @@
         const masterRecords = [];
         const used = [];
         for (const [task, classes] of parts) {
-          let log = null;
-          if (REPLAY_CACHE[`${task}_${PRESET_MODE}`]) {
-            log = REPLAY_CACHE[`${task}_${PRESET_MODE}`].data;
-          } else {
-            const res = await fetch(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`);
-            if (res.ok) log = await res.json();
-            else if (TASK_FILES[task]) {
-              const fb = await fetch(TASK_FILES[task]);
-              if (fb.ok) log = await fb.json();
-            }
-          }
-          if (!log) throw new Error(task + ' unavailable');
+          const res = await fetch(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`);
+          if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
+          const log = await res.json();
           used.push(log.meta && log.meta.model_id ? log.meta.model_id : task);
           for (const cls of classes) {
             const start = log.records.findIndex(r => r.true_class === cls);
@@ -4090,12 +3907,9 @@
           },
           records: masterRecords
         };
-        const masterName = 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)';
-        REPLAY_CACHE[cacheKey] = { data: masterData, name: masterName };
         hideLoading();
-        setupSession(masterData, 'master', masterName);
+        setupSession(masterData, 'master', 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)');
         switchTab('decoder');
-        play();
       } catch (err) {
         hideLoading();
         alert('Could not build the composite replay: ' + err.message);
