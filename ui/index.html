@@ -1521,7 +1521,7 @@
             <div class="panel-header">
               <div class="panel-title-wrap">
                 <span class="panel-title-icon">📈</span>
-                <span class="panel-title">EEG Signal Window (64-Ch Common Average Referenced & Bandpass Filtered)</span>
+                <span class="panel-title" id="eegPanelTitle">EEG Signal Window (6 of 64 channels, common average referenced, 4–40 Hz, stored at 40 Hz)</span>
               </div>
               <span class="panel-tag mono" id="sourceBadge">Source: Bundled Sample</span>
             </div>
@@ -1575,8 +1575,8 @@
                   onclick="setPresetMode('MI')">Imagined (MI)</button></div>
               <button class="preset-action-card" id="taskBtnMaster" onclick="loadUnifiedMasterSession()"
                 style="border-color:var(--teal-neon);background:linear-gradient(135deg, rgba(0,245,212,0.12), rgba(58,134,255,0.12));box-shadow:0 0 12px rgba(0,245,212,0.15);">
-                <div class="pac-title" style="color:var(--teal-neon);">🌐 Unified Master BCI: Full-Body Suite</div>
-                <div class="pac-desc">Multi-limb master decoding: seamlessly actuates Left Arm, Right Arm, Twin Hydraulic Clench, Bionic Feet, and Digit Articulations in one sequence!</div>
+                <div class="pac-title" style="color:var(--teal-neon);">🌐 Composite Demo: Arms, Feet and Fingers</div>
+                <div class="pac-desc">Plays short blocks from the stored Task A, Task B and finger replays back to back. Each block comes from a different model, so this is a composite, not one decoded session.</div>
               </button>
               <button class="preset-action-card" id="taskBtnLeftRight" onclick="loadPresetTask('left_right')">
                 <div class="pac-title">🦾 Left vs. Right Fist</div>
@@ -1756,7 +1756,7 @@
           <div class="topomap-box">
             <canvas id="topoCanvas" width="360" height="360"></canvas>
             <div style="font-size:11.5px;color:var(--text-muted);margin-top:12px;text-align:center;">
-              Click any electrode on the 64-channel 10-20 montage to inspect live voltage trace, frequency band power spectrum, and sensorimotor SNR telemetry.
+              Click an electrode on the 10-20 montage. Only the channels stored in the replay (C3, CZ, C4, FC3, FC4, CPZ) have a trace and band power.
             </div>
 
             <div class="channel-detail-card">
@@ -1765,10 +1765,10 @@
                 Primary sensorimotor area corresponding to right hand/fist motor imagery desynchronization.
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
-                <div>RMS: <span class="mono" style="color:var(--teal-neon);" id="chanRms">-- µV</span></div>
-                <div>Peak-to-Peak: <span class="mono" style="color:var(--teal-neon);" id="chanP2p">-- µV</span></div>
+                <div>RMS (z-score): <span class="mono" style="color:var(--teal-neon);" id="chanRms">--</span></div>
+                <div>Peak-to-peak (z-score): <span class="mono" style="color:var(--teal-neon);" id="chanP2p">--</span></div>
                 <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">-- dB</span></div>
-                <div>Status: <span class="mono" style="color:var(--teal-neon);" id="chanStatus">ACTIVE</span></div>
+                <div>Status: <span class="mono" style="color:var(--teal-neon);" id="chanStatus">--</span></div>
               </div>
             </div>
           </div>
@@ -1777,10 +1777,10 @@
           <div>
             <div
               style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-              Frequency Band Power Spectrum · Real-Time Spectral Telemetry</div>
+              <span id="bandHeaderText">Frequency band power (not computed: the stored traces are decimated 4×, which aliases the 20–40 Hz part)</span></div>
             <div class="bands-container">
               <div class="band-row">
-                <div class="band-name">Delta (0.5 – 4 Hz)</div>
+                <div class="band-name">Delta (outside the 4 – 40 Hz filter)</div>
                 <div class="band-bar-track">
                   <div class="band-bar-fill" id="bandFillDelta" style="background:var(--text-muted);width:0%;"></div>
                 </div>
@@ -1794,7 +1794,7 @@
                 <div class="band-power-val" id="bandValTheta">n/a</div>
               </div>
               <div class="band-row">
-                <div class="band-name" style="color:var(--teal-neon);font-weight:700;">Mu / Alpha (8 – 12 Hz)</div>
+                <div class="band-name" style="color:var(--teal-neon);font-weight:700;">Mu (8 – 13 Hz)</div>
                 <div class="band-bar-track">
                   <div class="band-bar-fill" id="bandFillAlpha"
                     style="background:var(--teal-neon);box-shadow:0 0 10px var(--teal-neon);width:0%;"></div>
@@ -1802,14 +1802,14 @@
                 <div class="band-power-val" id="bandValAlpha" style="color:var(--teal-neon);font-weight:700;">n/a</div>
               </div>
               <div class="band-row">
-                <div class="band-name">Beta (12 – 30 Hz)</div>
+                <div class="band-name">Beta (13 – 30 Hz)</div>
                 <div class="band-bar-track">
                   <div class="band-bar-fill" id="bandFillBeta" style="background:var(--amber-warning);width:0%;"></div>
                 </div>
                 <div class="band-power-val" id="bandValBeta">n/a</div>
               </div>
               <div class="band-row">
-                <div class="band-name">Gamma (30 – 45 Hz)</div>
+                <div class="band-name">Low gamma (30 – 40 Hz)</div>
                 <div class="band-bar-track">
                   <div class="band-bar-fill" id="bandFillGamma" style="background:var(--violet-electric);width:0%;">
                   </div>
@@ -1979,9 +1979,11 @@
       initRobot();
       computeSessionAnalytics();
       const simulated = !!(data.meta && data.meta.simulated);
-      if (simulated) {
-        document.getElementById('statAccuracy').textContent = 'n/a (simulated demo)';
-        document.getElementById('statMeanConf').textContent = 'n/a (simulated demo)';
+      const composite = !!(data.meta && data.meta.composite);
+      if (simulated || composite) {
+        const why = simulated ? 'n/a (simulated demo)' : 'n/a (composite of separate models)';
+        document.getElementById('statAccuracy').textContent = why;
+        document.getElementById('statMeanConf').textContent = why;
       }
       document.getElementById('sourceBadge').style.color = simulated ? '#ffb703' : '';
       if (String(taskKey).startsWith('finger')) { manualFingerControl = false; fingerWaveActive = false; }
@@ -2124,47 +2126,74 @@
     }
 
     /* ================================================================
-       SENSORIMOTOR WAVEFORM SYNTHESIS & OSCILLOSCOPE STREAM
+       STORED EEG TRACES AND MODEL-OUTPUT TIMELINE
+       Only traces stored in a replay log are drawn. Nothing is synthesized.
        ================================================================ */
-    function getSynthesizedFingerWaveform(rec, idx) {
-      const cmd = (rec && rec.predicted_class) || 'rest';
-      const t = (rec && typeof rec.t === 'number') ? rec.t : ((idx || 0) * 0.125);
-      const fingerFreqs = { thumb: 10.2, index: 11.4, middle: 10.8, ring: 9.8, pinky: 12.0, rest: 10.0 };
-      const fMu = fingerFreqs[cmd] || 10.0;
-      const channels = [];
-
-      for (let c = 0; c < 6; c++) {
-        const trace = [];
-        const chPhase = c * 0.72;
-        const isContralateral = (c === 0 || c === 3 || c === 4);
-        const suppression = (cmd !== 'rest' && isContralateral) ? 0.35 : 1.25;
-
-        for (let s = 0; s < 40; s++) {
-          const timeSec = s / 40.0;
-          const mu = Math.sin(2 * Math.PI * fMu * timeSec + chPhase + t * 4) * suppression;
-          const beta = 0.38 * Math.sin(2 * Math.PI * (fMu * 2.05) * timeSec + chPhase * 1.6);
-          const theta = 0.22 * Math.sin(2 * Math.PI * 5.2 * timeSec + c * 0.8);
-          const noise = (Math.sin(s * 17.1 + c * 4.3 + t * 2) * 0.18);
-          trace.push(+(mu + beta + theta + noise).toFixed(3));
-        }
-        channels.push(trace);
-      }
-      return channels;
+    function getRecordWaveform(rec, idx) {
+      return (rec && rec.waveform && rec.waveform.length) ? rec.waveform : null;
     }
 
-    function getRecordWaveform(rec, idx) {
-      if (rec && rec.waveform && rec.waveform.length) return rec.waveform;
-      return getSynthesizedFingerWaveform(rec, idx);
+    function drawModelTimeline() {
+      const canvas = document.getElementById('waveCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr, h = canvas.height / dpr;
+      ctx.clearRect(0, 0, w, h);
+      const n = records.length;
+      if (!n) return;
+      const L = 44, R = 12, T = 22, B = 22;
+      const pw = w - L - R, ph = h - T - B;
+      ctx.font = '10px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#7f8ea3';
+      ctx.fillText('MODEL OUTPUT TIMELINE · decoded confidence per window · no EEG is stored for this replay', L, 13);
+      // axes and grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+      [0, 0.5, 1].forEach(v => {
+        const y = T + ph * (1 - v);
+        ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+        ctx.fillStyle = '#7f8ea3'; ctx.fillText(Math.round(v * 100) + '%', 8, y + 3);
+      });
+      // one bar per pixel column: mean confidence, coloured by share of correct windows
+      const cols = Math.max(1, Math.floor(pw));
+      for (let c = 0; c < cols; c++) {
+        const i0 = Math.floor(c * n / cols), i1 = Math.max(i0 + 1, Math.floor((c + 1) * n / cols));
+        let conf = 0, ok = 0, lab = 0, cnt = 0;
+        for (let i = i0; i < i1 && i < n; i++) {
+          const r = records[i];
+          conf += (r.probs && r.probs[r.predicted_class]) || 0; cnt++;
+          if (r.true_class != null) { lab++; if (r.predicted_class === r.true_class) ok++; }
+        }
+        if (!cnt) continue;
+        conf /= cnt;
+        ctx.fillStyle = lab === 0 ? 'rgba(127,142,163,0.55)' : (ok / lab >= 0.5 ? 'rgba(0,245,212,0.55)' : 'rgba(255,77,109,0.7)');
+        const bh = conf * ph;
+        ctx.fillRect(L + c * pw / cols, T + ph - bh, Math.max(1, pw / cols), bh);
+      }
+      // playhead
+      const x = L + (currentIdx / Math.max(1, n - 1)) * pw;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
+      ctx.fillStyle = '#7f8ea3';
+      ctx.fillText('window 1', L, h - 6);
+      ctx.textAlign = 'right'; ctx.fillText('window ' + n, L + pw, h - 6);
+      ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,245,212,0.9)'; ctx.fillText('teal = decoded class matches label', L + pw / 2 - 90, h - 6);
+      ctx.fillStyle = 'rgba(255,77,109,0.95)'; ctx.fillText('red = miss', L + pw / 2 + 110, h - 6);
     }
 
     function drawWaveform(channels) {
       const activeChannels = (channels && channels.length) ? channels : getRecordWaveform(records[currentIdx], currentIdx);
+      const tEl = document.getElementById('eegPanelTitle');
       if (!activeChannels || !activeChannels.length) {
-        const c0 = document.getElementById('waveCanvas'), x0 = c0.getContext('2d'), d0 = window.devicePixelRatio || 1;
-        x0.clearRect(0, 0, c0.width / d0, c0.height / d0);
-        x0.fillStyle = '#7f8ea3'; x0.font = '12px "IBM Plex Mono", monospace';
-        x0.fillText('No EEG waveform is stored for this replay', 16, 30);
+        if (tEl) tEl.textContent = 'Model Output Timeline (decoded confidence, no EEG stored for this replay)';
+        drawModelTimeline();
         return;
+      }
+      if (tEl) {
+        const cm = logData && logData.meta && logData.meta.signal && logData.meta.signal.channel_mapping;
+        const cmText = cm ? ' · BioSemi ' + Object.keys(cm).map(k => String(cm[k]).split(' ')[0]).join('/') + ' as ' + Object.keys(cm).join('/') : '';
+        tEl.textContent = 'EEG Signal Window (' + activeChannels.length + ' channels, ' + (cm ? 'CAR' : 'common average referenced') + ', 4–40 Hz, stored at ' + activeChannels[0].length + ' Hz' + cmText + ')';
       }
       const canvas = document.getElementById('waveCanvas');
       const ctx = canvas.getContext('2d');
@@ -3344,41 +3373,11 @@
     });
 
     function getChannelTrace(channelName, rec) {
-      if (!rec) return [];
-      const wave = (rec.waveform && rec.waveform.length) ? rec.waveform : getSynthesizedFingerWaveform(rec, currentIdx);
-      if (!wave || !wave.length) return [];
-      const names = (logData && logData.channel_names) || ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
+      // Only channels stored in the replay log have a trace; other electrodes have none.
+      if (!rec || !rec.waveform || !rec.waveform.length) return [];
+      const names = (logData && logData.channel_names) || [];
       const ci = names.indexOf(channelName);
-      if (ci >= 0 && wave[ci]) return wave[ci];
-
-      // Spatial inverse-distance interpolation from motor channels across 10-20 layout
-      const targetEl = ELECTRODES.find(e => e.id === channelName) || { x: 0.5, y: 0.5 };
-      const anchors = [
-        { name: 'C3', x: 0.32, y: 0.53, idx: 0 },
-        { name: 'CZ', x: 0.50, y: 0.53, idx: 1 },
-        { name: 'C4', x: 0.68, y: 0.53, idx: 2 },
-        { name: 'FC3', x: 0.35, y: 0.45, idx: 3 },
-        { name: 'CP3', x: 0.35, y: 0.62, idx: 4 },
-        { name: 'CP4', x: 0.65, y: 0.62, idx: Math.min(5, wave.length - 1) },
-      ];
-      let totalW = 0, weights = [];
-      anchors.forEach(a => {
-        const d = Math.hypot(targetEl.x - a.x, targetEl.y - a.y) + 0.04;
-        const w = 1 / (d * d * d);
-        weights.push({ idx: a.idx, w });
-        totalW += w;
-      });
-      const L = wave[0].length;
-      const out = new Array(L).fill(0);
-      for (let s = 0; s < L; s++) {
-        let sum = 0;
-        weights.forEach(item => {
-          const val = (wave[item.idx] && wave[item.idx][s]) || 0;
-          sum += val * (item.w / totalW);
-        });
-        out[s] = sum;
-      }
-      return out;
+      return (ci >= 0 && rec.waveform[ci]) ? rec.waveform[ci] : [];
     }
 
     function drawSingleChannelTrace() {
@@ -3394,7 +3393,7 @@
       const trace = getChannelTrace(selectedChannelName, rec);
       if (!trace || !trace.length) {
         ctx.fillStyle = '#7f8ea3'; ctx.font = '12px "IBM Plex Mono", monospace'; ctx.textAlign = 'left';
-        ctx.fillText('No waveform data available for active record', 14, 24);
+        ctx.fillText(((logData && logData.channel_names) || []).length ? 'No stored trace for ' + selectedChannelName + '. Stored channels: ' + logData.channel_names.join(', ') : 'No EEG is stored for this replay', 14, 24);
         return;
       }
 
@@ -3420,90 +3419,44 @@
 
     function updateChannelBands(record) {
       const rec = record || records[currentIdx];
-      if (!rec) return;
-
-      const trace = getChannelTrace(selectedChannelName, rec);
-      if (!trace || !trace.length) return;
-
-      const N = trace.length;
-      
-      // 1. RMS & Peak-to-Peak Amplitude (scaled to clinical microvolts)
-      let sumSq = 0, minV = Infinity, maxV = -Infinity;
-      trace.forEach(v => {
-        sumSq += v * v;
-        if (v < minV) minV = v;
-        if (v > maxV) maxV = v;
-      });
-      const rmsUv = (Math.sqrt(sumSq / N) * 18.5).toFixed(1);
-      const p2pUv = ((maxV - minV) * 22.0).toFixed(1);
-
-      const rmsEl = document.getElementById('chanRms');
-      const p2pEl = document.getElementById('chanP2p');
-      if (rmsEl) rmsEl.textContent = `${rmsUv} µV`;
-      if (p2pEl) p2pEl.textContent = `${p2pUv} µV`;
-
-      // 2. Real-time Spectral Band Integration via Discrete Fourier Transform
-      const powerBins = [];
-      for (let k = 1; k < Math.floor(N / 2); k++) {
-        let re = 0, im = 0;
-        for (let n = 0; n < N; n++) {
-          const angle = (2 * Math.PI * k * n) / N;
-          re += trace[n] * Math.cos(angle);
-          im -= trace[n] * Math.sin(angle);
-        }
-        const freq = (k * 40) / N;
-        powerBins.push({ freq, pwr: (re * re + im * im) / N });
+      const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+      const head = document.getElementById('bandHeaderText');
+      const trace = rec ? getChannelTrace(selectedChannelName, rec) : [];
+      set('chanSnr', 'n/a');
+      // Real relative band power, when the replay log stores it (computed from the full-rate window by the signal-export notebook).
+      const names = (logData && logData.channel_names) || [];
+      let col = -1, allMean = false;
+      if (rec && rec.bands) {
+        if (names.length) col = names.indexOf(selectedChannelName);
+        else if (rec.bands.mu && rec.bands.mu.length === 1) { col = 0; allMean = true; }
       }
-
-      let pDelta = 0, pTheta = 0, pAlpha = 0, pBeta = 0, pGamma = 0;
-      powerBins.forEach(b => {
-        if (b.freq < 4) pDelta += b.pwr;
-        else if (b.freq < 8) pTheta += b.pwr;
-        else if (b.freq < 12) pAlpha += b.pwr;
-        else if (b.freq < 20) pBeta += b.pwr;
-        else pGamma += b.pwr;
-      });
-      pGamma += pBeta * 0.18;
-
-      const totalP = (pDelta + pTheta + pAlpha + pBeta + pGamma) || 1;
-      const pctDelta = (pDelta / totalP) * 100;
-      const pctTheta = (pTheta / totalP) * 100;
-      const pctAlpha = (pAlpha / totalP) * 100;
-      const pctBeta = (pBeta / totalP) * 100;
-      const pctGamma = (pGamma / totalP) * 100;
-
-      const setBar = (id, pct) => {
-        const bar = document.getElementById('bandFill' + id);
-        const val = document.getElementById('bandVal' + id);
-        if (bar) bar.style.width = Math.min(100, pct).toFixed(1) + '%';
-        if (val) val.textContent = `${pct.toFixed(1)}% (${(pct * 0.45).toFixed(1)} µV²)`;
-      };
-      setBar('Delta', pctDelta);
-      setBar('Theta', pctTheta);
-      setBar('Alpha', pctAlpha);
-      setBar('Beta', pctBeta);
-      setBar('Gamma', pctGamma);
-
-      // 3. Sensorimotor Signal-to-Noise Ratio (dB)
-      const signalP = pAlpha + pBeta;
-      const noiseP = pDelta + pTheta + 0.001;
-      const snrDb = Math.max(0, 10 * Math.log10(signalP / noiseP) + 6.0).toFixed(1);
-      const snrEl = document.getElementById('chanSnr');
-      if (snrEl) snrEl.textContent = `${snrDb} dB`;
-
-      const statusEl = document.getElementById('chanStatus');
-      if (statusEl) {
-        if (parseFloat(snrDb) >= 12.0) {
-          statusEl.textContent = 'EXCELLENT (HIGH MU-SYNCHRONY)';
-          statusEl.style.color = 'var(--teal-neon)';
-        } else if (parseFloat(snrDb) >= 6.0) {
-          statusEl.textContent = 'NOMINAL (OPTIMAL)';
-          statusEl.style.color = 'var(--cyan-bright)';
+      const map = { Theta: 'theta', Alpha: 'mu', Beta: 'beta', Gamma: 'gamma_low' };
+      ['Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'].forEach(b => {
+        const bar = document.getElementById('bandFill' + b);
+        const key = map[b];
+        if (col >= 0 && key && rec.bands[key] && rec.bands[key][col] != null) {
+          const v = rec.bands[key][col];
+          if (bar) bar.style.width = Math.min(100, v * 100) + '%';
+          set('bandVal' + b, (v * 100).toFixed(1) + '%');
         } else {
-          statusEl.textContent = 'FAIR / MU-DESYNC';
-          statusEl.style.color = 'var(--amber-warning)';
+          if (bar) bar.style.width = '0%';
+          set('bandVal' + b, b === 'Delta' ? 'outside filter' : 'not computed');
         }
+      });
+      if (head) head.textContent = col >= 0
+        ? 'Relative band power (share of the 4–40 Hz power of the stored 1 s window' + (allMean ? ', mean over all channels' : '') + ')'
+        : 'Frequency band power (not computed: the stored traces are decimated 4×, which aliases the 20–40 Hz part)';
+      if (!trace || !trace.length) {
+        set('chanRms', 'n/a'); set('chanP2p', 'n/a');
+        set('chanStatus', col >= 0 ? 'BAND POWER STORED' : 'NO STORED TRACE');
+        return;
       }
+      // Real statistics of the stored window, in z-score units (the stored windows are z-scored per channel).
+      const N = trace.length; let sumSq = 0, mn = Infinity, mx = -Infinity;
+      trace.forEach(v => { sumSq += v * v; if (v < mn) mn = v; if (v > mx) mx = v; });
+      set('chanRms', Math.sqrt(sumSq / N).toFixed(2) + ' σ');
+      set('chanP2p', (mx - mn).toFixed(2) + ' σ');
+      set('chanStatus', 'STORED WINDOW');
     }
 
     /* ================================================================
@@ -3880,51 +3833,48 @@
     }
 
     async function loadUnifiedMasterSession() {
-      showLoading('Synthesizing Unified Master Cybernetic Suite...', 'Combining Task A, Task B, and Bionic Digits into Full-Body Session');
+      showLoading('Building composite replay...', 'Stored Task A, Task B and finger replays, played back to back');
       try {
-        let resA = await fetch('sample_task_a_left_right.json');
-        let dataA = await resA.json();
-        let resB = await fetch('sample_task_b_fists_feet.json');
-        let dataB = await resB.json();
-
+        const parts = [
+          ['left_right', ['left', 'right']],
+          ['fists_feet', ['both_fists', 'both_feet']],
+          ['finger_3', ['thumb', 'index', 'pinky']]
+        ];
+        const BLOCK = 8;
         const masterRecords = [];
-        const count = Math.min(dataA.records.length, dataB.records.length, 36);
-
-        // Interleave Task A (Left/Right) and Task B (Both Fists/Both Feet)
-        for (let i = 0; i < count; i++) {
-          const src = (i % 2 === 0) ? dataA.records[i] : dataB.records[i];
-          const rec = JSON.parse(JSON.stringify(src));
-          rec.t = +(i * 0.125).toFixed(3);
-          masterRecords.push(rec);
+        const used = [];
+        for (const [task, classes] of parts) {
+          const res = await fetch(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`);
+          if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
+          const log = await res.json();
+          used.push(log.meta && log.meta.model_id ? log.meta.model_id : task);
+          for (const cls of classes) {
+            const start = log.records.findIndex(r => r.true_class === cls);
+            if (start < 0) continue;
+            // Unedited model outputs: the first labelled block of each class, as stored.
+            log.records.slice(start, start + BLOCK).forEach(r => {
+              const rec = JSON.parse(JSON.stringify(r));
+              rec.t = +(masterRecords.length * 0.125).toFixed(3);
+              masterRecords.push(rec);
+            });
+          }
         }
-
-        // Append dedicated finger actuation blocks (Thumb, Index, Pinky)
-        const fingerSeq = ['thumb', 'index', 'pinky', 'thumb', 'index', 'pinky'];
-        fingerSeq.forEach((fl, idx) => {
-          const base = JSON.parse(JSON.stringify(dataA.records[idx % dataA.records.length]));
-          base.t = +(masterRecords.length * 0.125).toFixed(3);
-          base.true_class = fl;
-          base.predicted_class = fl;
-          base.probs = { [fl]: 0.94, rest: 0.04, left: 0.02 };
-          masterRecords.push(base);
-        });
-
         const masterData = {
           label_order: ['left', 'right', 'both_fists', 'both_feet', 'thumb', 'index', 'pinky', 'rest'],
-          channel_names: ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'],
+          channel_names: [],
           meta: {
-            model_id: 'Unified Full-Body Cybernetic Suite (Master BCI)',
-            training_note: 'Multi-limb coordinated control integrating Task A, Task B & digit flexion'
+            composite: true,
+            model_id: 'Composite replay',
+            source: 'Composite of separately decoded stored replays (' + used.join(', ') + '), not one decoded session'
           },
           records: masterRecords
         };
-
         hideLoading();
-        setupSession(masterData, 'master', 'Unified Master BCI Suite (All Limbs & Digits)');
+        setupSession(masterData, 'master', 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)');
         switchTab('decoder');
       } catch (err) {
         hideLoading();
-        alert('Could not synthesize master session: ' + err.message);
+        alert('Could not build the composite replay: ' + err.message);
       }
     }
 

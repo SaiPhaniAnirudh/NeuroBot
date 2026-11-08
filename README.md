@@ -85,6 +85,18 @@ talks to the Space directly for `/ws/replay/{task}`. A free Space sleeps after a
 request, so the first request can be slow. `.github/workflows/keep-alive.yml` pings `/api/health` every six hours.
 Memory is limited, so keep `NEUROBOT_MAX_SECONDS` (default 900) and the upload limits in mind.
 
+## Real EEG traces and band power
+
+Every replay log now carries real EEG and its band power, added without any training by
+`notebooks/neurobot_signal_export_v1.ipynb`. The notebook rebuilds the same held-out windows, checks them against the stored
+logs (window count, trial ids, true classes and the exported model's predictions) and writes full-rate traces plus relative
+band power (theta, mu, beta, low gamma) into copies of the logs.
+
+* Limb replays: 6 channels (C3, CZ, C4, FC3, FC4, CPZ) at 160 Hz. The model reproduces the stored predictions on 100% of windows.
+* Finger replays (S01): 3 channels at 100 Hz. The finger recordings use the BioSemi 128 layout, so the nearest electrodes D19, A1 and B22 stand in for C3, CZ and C4 (approximate). Every stored window was matched to a rebuilt window of the same trial by its ONNX probabilities.
+* The large finger logs are stored as `replay_finger_*.json.gz`; the backend reads both `.json` and `.json.gz`.
+* Band power is relative power of the z-scored 1 s window (1 Hz resolution). No signal-to-noise ratio is computed.
+
 ## Known limits
 
 * The UI's Signal & 10-20 Cap tab shows band-power and amplitude values that are not computed from the

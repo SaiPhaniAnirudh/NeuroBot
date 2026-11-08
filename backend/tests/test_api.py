@@ -257,3 +257,14 @@ def test_notebook_replay_log_is_preferred_and_describes_itself(client, tmp_path,
     assert t["replays"][0]["file"] == "replay_left_right_ME.json" and t["replays"][0]["mode"] == "ME"
     # no mode given: the model-based replay wins over the earlier window-level log
     assert client.get("/api/replay/log/left_right").json()["replay_file"] == "replay_left_right_ME.json"
+
+
+def test_limb_replays_carry_real_signal_and_band_power(client):
+    for task, n in (("left_right", 160), ("fists_feet", 160)):
+        for mode in ("ME", "MI"):
+            j = client.get(f"/api/replay/log/{task}?mode={mode}").json()
+            assert j["meta"]["signal"]["samples_per_window"] == n
+            r = j["records"][100]
+            assert len(r["waveform"]) == 6 and len(r["waveform"][0]) == n
+            assert 0.99 < sum(r["bands"][b][0] for b in r["bands"]) < 1.01
+            assert "ONNX reproduces the stored predictions on 1.0000" in j["meta"]["signal"]["alignment"]

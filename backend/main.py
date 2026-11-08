@@ -17,6 +17,7 @@ Nothing here calls an external service. If no model is loaded for a task/mode th
 """
 
 import asyncio
+import gzip
 import json
 import logging
 import os
@@ -26,6 +27,7 @@ from typing import Literal, Optional
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -64,6 +66,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NeuroBot API", version=VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 # ── replay helpers ─────────────────────────────────────────────────────────
@@ -84,9 +87,19 @@ def _replay_candidates(task: str, mode: Optional[str]):
     return files
 
 
+def _replay_path(fname: str) -> Optional[str]:
+    """A replay log may be stored as name.json or, for the large finger logs that carry EEG, as name.json.gz."""
+    path = os.path.join(DATA_DIR, fname)
+    if os.path.exists(path):
+        return path
+    if os.path.exists(path + ".gz"):
+        return path + ".gz"
+    return None
+
+
 def _find_replay(task: str, mode: Optional[str] = None):
     for fname, m in _replay_candidates(task, mode):
-        if os.path.exists(os.path.join(DATA_DIR, fname)):
+        if _replay_path(fname):
             return fname, m
     return None
 
@@ -96,7 +109,9 @@ def _load_replay(task: str, mode: Optional[str]):
     if not found:
         raise HTTPException(status_code=404, detail=f"No replay log exists for task '{task}'" + (f", mode '{mode}'." if mode else "."))
     fname, m = found
-    with open(os.path.join(DATA_DIR, fname), encoding="utf-8") as fh:
+    path = _replay_path(fname)
+    opener = gzip.open if path.endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8") as fh:
         data = json.load(fh)
     prov = _replay_index().get(fname) or data.get("meta")  # logs from the export notebook describe themselves
     if prov:
@@ -136,7 +151,7 @@ def list_tasks():
     for task, order in TASK_LABEL_ORDER.items():
         replays = []
         for fname, m in _replay_candidates(task, None):
-            if os.path.exists(os.path.join(DATA_DIR, fname)):
+            if _replay_path(fname):
                 replays.append({"file": fname, "mode": m, "source": (index.get(fname) or {}).get("source")})
         out[task] = {
             "available": bool(replays),
@@ -147,7 +162,7 @@ def list_tasks():
         }
     for task, order in FINGER_LABEL_ORDER.items():
         replays = [{"file": f, "mode": m, "source": None} for f, m in _replay_candidates(task, None)
-                   if os.path.exists(os.path.join(DATA_DIR, f))]
+                   if _replay_path(f)]
         if replays:
             out[task] = {"available": True, "file": replays[0]["file"], "label_order": order,
                          "models": {m: False for m in model_registry.MODES}, "replays": replays, "replay_only": True}
