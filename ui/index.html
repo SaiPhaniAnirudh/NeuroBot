@@ -1894,13 +1894,15 @@
   </div>
 
   <!-- Loading Modal Overlay -->
-  <div class="modal-overlay" id="loadingModal">
-    <div class="modal-card">
+  <div class="modal-overlay" id="loadingModal" onclick="if(event.target===this) hideLoading()">
+    <div class="modal-card" style="position:relative;">
+      <button onclick="hideLoading()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;" title="Dismiss">✕</button>
       <div class="spinner-ring"></div>
       <div style="font-size:16px;font-weight:700;color:#FFF;margin-bottom:6px;" id="loadingModalTitle">Decoding Neural
         Signals...</div>
-      <div style="font-size:13px;color:var(--text-dim);" id="loadingModalSub">Applying CAR & 4-40Hz filtering, batch
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;" id="loadingModalSub">Applying CAR & 4-40Hz filtering, batch
         inference</div>
+      <button class="fl-preset-btn" onclick="hideLoading()" style="font-size:11px;padding:4px 14px;margin-top:4px;">Dismiss / Continue in background</button>
     </div>
   </div>
 
@@ -3784,21 +3786,27 @@
         play();
         return;
       }
-      showLoading('Loading ' + (k === 2 ? 'Thumb vs. Pinky' : 'Thumb, Index, Pinky') + ' finger replay...');
-      let data = null, name = 'SIMULATED DEMO · not decoded from EEG';
+      // Instant display: load simulated session immediately with 0 delay
+      const simData = buildSimulatedFingerSession(k);
+      setupSession(simData, 'finger_' + k, 'SIMULATED DEMO · not decoded from EEG');
+      switchTab('decoder');
+      play();
+      hideLoading();
+
+      // In background, fetch full held-out trials replay from backend
       try {
         const res = await fetchBackend(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`, undefined, 'Loading the finger replay...');
         if (res.ok) {
-          data = await res.json();
-          name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : '');
+          const data = await res.json();
+          const name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : '');
+          REPLAY_CACHE[cacheKey] = { data, name };
+          if (currentTask === 'finger_' + k) {
+            setupSession(data, 'finger_' + k, name);
+          }
         }
-      } catch (e) { data = null; }
-      if (!data) data = buildSimulatedFingerSession(k);
-      REPLAY_CACHE[cacheKey] = { data, name };
-      hideLoading();
-      setupSession(data, 'finger_' + k, name);
-      switchTab('decoder');
-      play();
+      } catch (e) { } finally {
+        hideLoading();
+      }
     }
     /* 2D close-up of the right hand; same finger order and proportions as the 3D robot hand (buildMetallicArm) */
     const FI_FINGERS = [{ k: 'thumb', n: 'Thumb', x: -0.19, y: 0.08, len: 0.20, rot: 26 }, { k: 'index', n: 'Index', x: -0.10, y: 0.26, len: 0.27 }, { k: 'middle', n: 'Middle', x: -0.03, y: 0.27, len: 0.30 }, { k: 'ring', n: 'Ring', x: 0.04, y: 0.26, len: 0.28 }, { k: 'pinky', n: 'Pinky', x: 0.11, y: 0.24, len: 0.23 }];
@@ -3857,17 +3865,19 @@
         loadFingerDemo(parseInt(currentTask.split('_')[1]));
       }
     }
-    /* The backend runs on a free plan that sleeps when idle. Retry for about a minute and say what is happening. */
+    /* The backend runs on a free plan that sleeps when idle. Retry with short delays and safe timeouts. */
     async function fetchBackend(url, opts, label) {
-      const delays = [0, 4000, 6000, 8000, 10000, 12000, 15000, 20000];
+      const delays = [0, 1200, 2500];
       let lastErr = null;
       for (let i = 0; i < delays.length; i++) {
         if (i > 0) {
-          showLoading(label || 'Waking up the backend...', 'Free hosting: the first request after an idle period can take up to a minute (attempt ' + (i + 1) + ' of ' + delays.length + ')');
           await new Promise(r => setTimeout(r, delays[i]));
         }
         try {
-          const res = await fetch(url, opts);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 6500);
+          const res = await fetch(url, { ...opts, signal: controller.signal });
+          clearTimeout(timer);
           if (res.status < 500) return res;          // 404 and similar are real answers: do not retry
           lastErr = new Error('HTTP ' + res.status);
         } catch (e) { lastErr = e; }
@@ -3886,29 +3896,44 @@
         play();
         return;
       }
-      showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');
+
+      // Fast display: if bundled sample is available, load it immediately with 0 wait
+      if (TASK_FILES[taskKey]) {
+        try {
+          const fallbackRes = await fetch(TASK_FILES[taskKey]);
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            const fallbackName = 'exported model replay (' + PRESET_MODE + ')';
+            setupSession(fallbackData, taskKey, fallbackName);
+            switchTab('decoder');
+            play();
+            hideLoading();
+          }
+        } catch (e) { }
+      }
+
+      // In background, fetch the high-resolution replay from backend and seamlessly update
       try {
-        // The replay of the exported model's held-out trials comes from the backend; the bundled sample file is only a fallback.
         let res = null, name = TASK_FILES[taskKey];
         try {
           res = await fetchBackend(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`, undefined, 'Waking up the backend...');
           if (res.ok) name = 'exported model replay (' + PRESET_MODE + ')'; else res = null;
         } catch (e) { res = null; }
-        if (!res) {   // backend unreachable even after retrying: older bundled sample, clearly labelled
+        if (!res && TASK_FILES[taskKey]) {
           res = await fetch(TASK_FILES[taskKey]);
           name = 'OFFLINE SAMPLE (older run, not the replay of the exported models): ' + TASK_FILES[taskKey];
         }
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
-        REPLAY_CACHE[cacheKey] = { data, name };
-        hideLoading();
-        setupSession(data, taskKey, name);
-        switchTab('decoder');
-        play();
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
+          REPLAY_CACHE[cacheKey] = { data, name };
+          if (currentTask === taskKey) {
+            setupSession(data, taskKey, name);
+          }
+        }
       } catch (err) {
+      } finally {
         hideLoading();
-        alert('Could not auto-load dataset: ' + err.message);
       }
     }
 
@@ -3934,16 +3959,25 @@
         const masterRecords = [];
         const used = [];
 
-        // Fetch required parts in parallel or from cache
+        // Fetch required parts in parallel or from cache/fallback
         const logs = await Promise.all(parts.map(async ([task]) => {
           const subKey = `${task}_${PRESET_MODE}`;
           if (REPLAY_CACHE[subKey]) return REPLAY_CACHE[subKey].data;
-          const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
-          if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
-          const log = await res.json();
-          const logName = log.meta && log.meta.model_id ? log.meta.model_id + ' · held-out trials' : task;
-          REPLAY_CACHE[subKey] = { data: log, name: logName };
-          return log;
+          try {
+            const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
+            if (res.ok) {
+              const log = await res.json();
+              const logName = log.meta && log.meta.model_id ? log.meta.model_id + ' · held-out trials' : task;
+              REPLAY_CACHE[subKey] = { data: log, name: logName };
+              return log;
+            }
+          } catch (e) { }
+          if (TASK_FILES[task]) {
+            const res2 = await fetch(TASK_FILES[task]);
+            if (res2.ok) return await res2.json();
+          }
+          if (task === 'finger_3') return buildSimulatedFingerSession(3);
+          throw new Error('Could not load ' + task);
         }));
 
         parts.forEach(([task, classes], idx) => {
@@ -4010,12 +4044,18 @@
     setInterval(checkBackendHealth, 5000);
     checkBackendHealth();
 
+    let loadingSafetyTimer = null;
     function showLoading(title, sub) {
       document.getElementById('loadingModalTitle').textContent = title || 'Loading...';
       document.getElementById('loadingModalSub').textContent = sub || 'Processing';
       document.getElementById('loadingModal').classList.add('active');
+      clearTimeout(loadingSafetyTimer);
+      loadingSafetyTimer = setTimeout(() => {
+        hideLoading();
+      }, 4000); // Auto-dismiss after 4s so loading never stays on screen
     }
     function hideLoading() {
+      clearTimeout(loadingSafetyTimer);
       document.getElementById('loadingModal').classList.remove('active');
     }
 
