@@ -897,6 +897,10 @@
       margin-bottom: 22px;
     }
 
+    .dropzone-box * {
+      pointer-events: none;
+    }
+
     .dropzone-box:hover,
     .dropzone-box.drag-over {
       border-color: var(--teal-neon);
@@ -969,6 +973,15 @@
       border-color: var(--line-bright);
       background: rgba(0, 245, 212, 0.05);
       transform: translateY(-2px);
+    }
+
+    .preset-action-card.active {
+      border-color: var(--teal-neon) !important;
+      background: linear-gradient(135deg, rgba(0, 245, 212, 0.12), rgba(58, 134, 255, 0.12)) !important;
+      box-shadow: 0 0 12px rgba(0, 245, 212, 0.15) !important;
+    }
+    .preset-action-card.active .pac-title {
+      color: var(--teal-neon) !important;
     }
 
     .pac-title {
@@ -1573,9 +1586,8 @@
                 <span>Movement type:</span><button class="fl-preset-btn active" id="btnModeME"
                   onclick="setPresetMode('ME')">Executed (ME)</button><button class="fl-preset-btn" id="btnModeMI"
                   onclick="setPresetMode('MI')">Imagined (MI)</button></div>
-              <button class="preset-action-card" id="taskBtnMaster" onclick="loadUnifiedMasterSession()"
-                style="border-color:var(--teal-neon);background:linear-gradient(135deg, rgba(0,245,212,0.12), rgba(58,134,255,0.12));box-shadow:0 0 12px rgba(0,245,212,0.15);">
-                <div class="pac-title" style="color:var(--teal-neon);">🌐 Composite Demo: Arms, Feet and Fingers</div>
+              <button class="preset-action-card active" id="taskBtnMaster" onclick="loadUnifiedMasterSession()">
+                <div class="pac-title">🌐 Composite Demo: Arms, Feet and Fingers</div>
                 <div class="pac-desc">Plays short blocks from the stored Task A, Task B and finger replays back to back. Each block comes from a different model, so this is a composite, not one decoded session.</div>
               </button>
               <button class="preset-action-card" id="taskBtnLeftRight" onclick="loadPresetTask('left_right')">
@@ -1909,6 +1921,23 @@
     let playing = false;
     let playTimer = null;
     let currentTask = 'left_right';
+    const REPLAY_CACHE = {};
+
+    function updateActiveTaskButton(taskKey) {
+      const map = {
+        'master': 'taskBtnMaster',
+        'left_right': 'taskBtnLeftRight',
+        'fists_feet': 'taskBtnFistsFeet',
+        'finger_2': 'taskBtnFinger2',
+        'finger_3': 'taskBtnFinger3'
+      };
+      document.querySelectorAll('.preset-action-card').forEach(b => b.classList.remove('active'));
+      const btnId = map[taskKey];
+      if (btnId) {
+        const el = document.getElementById(btnId);
+        if (el) el.classList.add('active');
+      }
+    }
 
     let selectedChannelName = 'C3';
     let selectedChannelIndex = 8;
@@ -1968,6 +1997,7 @@
       records = data.records || [];
       labelOrder = data.label_order || ['left', 'rest', 'right'];
       currentTask = taskKey || 'custom';
+      updateActiveTaskButton(currentTask);
       if (!data.channel_names || !data.channel_names.length) {
         data.channel_names = ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
       }
@@ -3142,18 +3172,19 @@
       requestAnimationFrame(animateRobot);
       if (!robotInited || !robotRenderer) return;
 
-      const sp = 0.12;
+      const sp = 0.18;
+      const camSp = 0.18;
       const orbitX = Math.sin(orbitRotation.yaw) * cameraTarget.pos.z;
       const orbitZ = Math.cos(orbitRotation.yaw) * cameraTarget.pos.z;
       const orbitY = cameraTarget.pos.y + Math.sin(orbitRotation.pitch) * 2;
 
-      robotCamera.position.x += (orbitX - robotCamera.position.x) * 0.08;
-      robotCamera.position.y += (orbitY - robotCamera.position.y) * 0.08;
-      robotCamera.position.z += (orbitZ - robotCamera.position.z) * 0.08;
+      robotCamera.position.x += (orbitX - robotCamera.position.x) * camSp;
+      robotCamera.position.y += (orbitY - robotCamera.position.y) * camSp;
+      robotCamera.position.z += (orbitZ - robotCamera.position.z) * camSp;
 
-      currentLook.x += (cameraTarget.look.x - currentLook.x) * 0.08;
-      currentLook.y += (cameraTarget.look.y - currentLook.y) * 0.08;
-      currentLook.z += (cameraTarget.look.z - currentLook.z) * 0.08;
+      currentLook.x += (cameraTarget.look.x - currentLook.x) * camSp;
+      currentLook.y += (cameraTarget.look.y - currentLook.y) * camSp;
+      currentLook.z += (cameraTarget.look.z - currentLook.z) * camSp;
       robotCamera.lookAt(currentLook);
 
       // Torso Torsion & Flexion
@@ -3529,11 +3560,13 @@
 
     function exportSessionJson() {
       if (!logData) return;
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logData, null, 2));
+      const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute("href", dataStr);
-      dlAnchor.setAttribute("download", `neurobot_inference_log_${Date.now()}.json`);
+      dlAnchor.href = url;
+      dlAnchor.download = `neurobot_inference_log_${Date.now()}.json`;
       dlAnchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function exportSummaryCsv() {
@@ -3741,17 +3774,31 @@
       return { label_order: labels, meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
     }
     async function loadFingerDemo(k) {
+      updateActiveTaskButton('finger_' + k);
+      const cacheKey = `finger_${k}_${PRESET_MODE}`;
+      if (REPLAY_CACHE[cacheKey]) {
+        const cached = REPLAY_CACHE[cacheKey];
+        hideLoading();
+        setupSession(cached.data, 'finger_' + k, cached.name);
+        switchTab('decoder');
+        play();
+        return;
+      }
+      showLoading('Loading ' + (k === 2 ? 'Thumb vs. Pinky' : 'Thumb, Index, Pinky') + ' finger replay...');
       let data = null, name = 'SIMULATED DEMO · not decoded from EEG';
-      try {   // a real finger replay is used automatically once the backend serves one
-        const tasks = await (await fetchBackend(`${API_BASE}/api/tasks`, undefined, 'Waking up the backend...')).json(); hideLoading();
-        if (tasks && tasks['finger_' + k]) {
-          const res = await fetchBackend(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`, undefined, 'Loading the finger replay...'); hideLoading();
-          if (res.ok) { data = await res.json(); name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : ''); }
+      try {
+        const res = await fetchBackend(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`, undefined, 'Loading the finger replay...');
+        if (res.ok) {
+          data = await res.json();
+          name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : '');
         }
       } catch (e) { data = null; }
       if (!data) data = buildSimulatedFingerSession(k);
+      REPLAY_CACHE[cacheKey] = { data, name };
+      hideLoading();
       setupSession(data, 'finger_' + k, name);
       switchTab('decoder');
+      play();
     }
     /* 2D close-up of the right hand; same finger order and proportions as the 3D robot hand (buildMetallicArm) */
     const FI_FINGERS = [{ k: 'thumb', n: 'Thumb', x: -0.19, y: 0.08, len: 0.20, rot: 26 }, { k: 'index', n: 'Index', x: -0.10, y: 0.26, len: 0.27 }, { k: 'middle', n: 'Middle', x: -0.03, y: 0.27, len: 0.30 }, { k: 'ring', n: 'Ring', x: 0.04, y: 0.26, len: 0.28 }, { k: 'pinky', n: 'Pinky', x: 0.11, y: 0.24, len: 0.23 }];
@@ -3829,6 +3876,16 @@
     }
 
     async function loadPresetTask(taskKey) {
+      updateActiveTaskButton(taskKey);
+      const cacheKey = `${taskKey}_${PRESET_MODE}`;
+      if (REPLAY_CACHE[cacheKey]) {
+        const cached = REPLAY_CACHE[cacheKey];
+        hideLoading();
+        setupSession(cached.data, taskKey, cached.name);
+        switchTab('decoder');
+        play();
+        return;
+      }
       showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');
       try {
         // The replay of the exported model's held-out trials comes from the backend; the bundled sample file is only a fallback.
@@ -3844,9 +3901,11 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
+        REPLAY_CACHE[cacheKey] = { data, name };
         hideLoading();
         setupSession(data, taskKey, name);
         switchTab('decoder');
+        play();
       } catch (err) {
         hideLoading();
         alert('Could not auto-load dataset: ' + err.message);
@@ -3854,6 +3913,16 @@
     }
 
     async function loadUnifiedMasterSession() {
+      updateActiveTaskButton('master');
+      const cacheKey = `master_${PRESET_MODE}`;
+      if (REPLAY_CACHE[cacheKey]) {
+        const cached = REPLAY_CACHE[cacheKey];
+        hideLoading();
+        setupSession(cached.data, 'master', cached.name);
+        switchTab('decoder');
+        play();
+        return;
+      }
       showLoading('Building composite replay...', 'Stored Task A, Task B and finger replays, played back to back');
       try {
         const parts = [
@@ -3864,10 +3933,21 @@
         const BLOCK = 8;
         const masterRecords = [];
         const used = [];
-        for (const [task, classes] of parts) {
+
+        // Fetch required parts in parallel or from cache
+        const logs = await Promise.all(parts.map(async ([task]) => {
+          const subKey = `${task}_${PRESET_MODE}`;
+          if (REPLAY_CACHE[subKey]) return REPLAY_CACHE[subKey].data;
           const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
           if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
           const log = await res.json();
+          const logName = log.meta && log.meta.model_id ? log.meta.model_id + ' · held-out trials' : task;
+          REPLAY_CACHE[subKey] = { data: log, name: logName };
+          return log;
+        }));
+
+        parts.forEach(([task, classes], idx) => {
+          const log = logs[idx];
           used.push(log.meta && log.meta.model_id ? log.meta.model_id : task);
           for (const cls of classes) {
             const start = log.records.findIndex(r => r.true_class === cls);
@@ -3879,7 +3959,8 @@
               masterRecords.push(rec);
             });
           }
-        }
+        });
+
         const masterData = {
           label_order: ['left', 'right', 'both_fists', 'both_feet', 'thumb', 'index', 'pinky', 'rest'],
           channel_names: [],
@@ -3890,9 +3971,12 @@
           },
           records: masterRecords
         };
+        const masterName = 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)';
+        REPLAY_CACHE[cacheKey] = { data: masterData, name: masterName };
         hideLoading();
-        setupSession(masterData, 'master', 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)');
+        setupSession(masterData, 'master', masterName);
         switchTab('decoder');
+        play();
       } catch (err) {
         hideLoading();
         alert('Could not build the composite replay: ' + err.message);
