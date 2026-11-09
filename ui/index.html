@@ -3460,14 +3460,26 @@
       const names = (logData && logData.channel_names) || [];
       let col = -1, allMean = false;
       if (rec && rec.bands) {
-        if (names.length) col = names.indexOf(selectedChannelName);
+        if (names.length) {
+          col = names.indexOf(selectedChannelName);
+          if (col < 0) {
+            const nearest = {
+              'FC1': 'FC3', 'FC5': 'FC3', 'C1': 'C3', 'C5': 'C3', 'CP1': 'CPZ', 'CP3': 'C3', 'CP5': 'C3',
+              'FC2': 'FC4', 'FC6': 'FC4', 'C2': 'C4', 'C6': 'C4', 'CP2': 'CPZ', 'CP4': 'C4', 'CP6': 'C4',
+              'FZ': 'CZ', 'PZ': 'CPZ', 'FP1': 'FC3', 'FP2': 'FC4', 'F3': 'FC3', 'F4': 'FC4', 'P3': 'C3', 'P4': 'C4'
+            };
+            const mapped = nearest[selectedChannelName];
+            if (mapped && names.indexOf(mapped) >= 0) col = names.indexOf(mapped);
+            else col = 0;
+          }
+        }
         else if (rec.bands.mu && rec.bands.mu.length === 1) { col = 0; allMean = true; }
       }
       const map = { Theta: 'theta', Alpha: 'mu', Beta: 'beta', Gamma: 'gamma_low' };
       ['Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'].forEach(b => {
         const bar = document.getElementById('bandFill' + b);
         const key = map[b];
-        if (col >= 0 && key && rec.bands[key] && rec.bands[key][col] != null) {
+        if (col >= 0 && key && rec && rec.bands && rec.bands[key] && rec.bands[key][col] != null) {
           const v = rec.bands[key][col];
           if (bar) bar.style.width = Math.min(100, v * 100) + '%';
           set('bandVal' + b, (v * 100).toFixed(1) + '%');
@@ -3476,7 +3488,7 @@
           set('bandVal' + b, b === 'Delta' ? 'outside filter' : 'not computed');
         }
       });
-      if (head) head.textContent = col >= 0
+      if (head) head.textContent = (col >= 0 && rec && rec.bands)
         ? 'Relative band power (share of the 4–40 Hz power of the stored 1 s window' + (allMean ? ', mean over all channels' : '') + ')'
         : 'Frequency band power (not computed: the stored traces are decimated 4×, which aliases the 20–40 Hz part)';
       if (!trace || !trace.length) {
@@ -3770,10 +3782,16 @@
           const m = Math.max(...z), e = z.map(v => Math.exp(v - m)), sum = e.reduce((a, b) => a + b, 0);
           const probs = {}; labels.forEach((l, i) => { probs[l] = e[i] / sum; });
           const pred = labels.reduce((a, b) => (probs[a] >= probs[b] ? a : b));
-          recs.push({ t: recs.length * 0.125, trial, true_class: cue, predicted_class: pred, probs });
+          const bands = {
+            theta: [0.24 + rnd() * 0.04, 0.32 + rnd() * 0.04, 0.28 + rnd() * 0.04],
+            mu: [cue !== 'rest' ? 0.18 + rnd() * 0.03 : 0.44 + rnd() * 0.05, 0.30 + rnd() * 0.04, 0.36 + rnd() * 0.04],
+            beta: [cue !== 'rest' ? 0.48 + rnd() * 0.05 : 0.20 + rnd() * 0.03, 0.32 + rnd() * 0.04, 0.28 + rnd() * 0.04],
+            gamma_low: [0.08 + rnd() * 0.02, 0.06 + rnd() * 0.02, 0.08 + rnd() * 0.02]
+          };
+          recs.push({ t: recs.length * 0.125, trial, true_class: cue, predicted_class: pred, probs, bands });
         }
       }
-      return { label_order: labels, meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
+      return { label_order: labels, channel_names: ['C3', 'CZ', 'C4'], meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
     }
     async function loadFingerDemo(k) {
       updateActiveTaskButton('finger_' + k);
