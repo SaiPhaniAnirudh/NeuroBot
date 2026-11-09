@@ -897,10 +897,6 @@
       margin-bottom: 22px;
     }
 
-    .dropzone-box * {
-      pointer-events: none;
-    }
-
     .dropzone-box:hover,
     .dropzone-box.drag-over {
       border-color: var(--teal-neon);
@@ -1403,16 +1399,16 @@
       <div class="command-hero">
         <div>
           <div class="cmd-badge">⚡ Real-Time Decoded Neural Intent</div>
-          <div class="cmd-name mono" id="cmdHeroValue">REST</div>
+          <div class="cmd-name mono" id="cmdHeroValue">--</div>
           <div class="cmd-meta">
-            <span class="mono" id="cmdConfidenceText">Confidence: 98.2%</span>
+            <span class="mono" id="cmdConfidenceText">Confidence: --</span>
             <span>·</span>
-            <span class="mono" id="cmdTrueClassText">Ground Truth: Rest</span>
+            <span class="mono" id="cmdTrueClassText">Ground Truth: --</span>
             <span>·</span>
             <span class="mono" id="cmdTimeText">t = 0.000s</span>
           </div>
         </div>
-        <div class="match-pill match" id="cmdMatchStatus">MATCH</div>
+        <div class="match-pill" id="cmdMatchStatus">--</div>
       </div>
 
       <div class="decoder-grid">
@@ -1527,7 +1523,7 @@
                 <span class="panel-title-icon">📈</span>
                 <span class="panel-title" id="eegPanelTitle">EEG Signal Window (6 of 64 channels, common average referenced, 4–40 Hz, stored at 40 Hz)</span>
               </div>
-              <span class="panel-tag mono" id="sourceBadge">Source: Bundled Sample</span>
+              <span class="panel-tag mono" id="sourceBadge">Source: loading...</span>
             </div>
 
             <canvas id="waveCanvas" height="140"></canvas>
@@ -1640,11 +1636,11 @@
                 <span class="format-pill">.EDF / .EDF+</span>
                 <span class="format-pill">.CSV (64-Ch)</span>
                 <span class="format-pill">.TSV</span>
-                <span class="format-pill">.JSON / .JSON.GZ</span>
+                <span class="format-pill">.JSON Log</span>
               </div>
+              <input type="file" id="hiddenFileInput" style="display:none;"
+                accept=".edf,.bdf,.csv,.tsv,.txt,.npy,.json">
             </div>
-            <input type="file" id="hiddenFileInput" style="display:none;"
-              accept=".edf,.bdf,.csv,.tsv,.txt,.npy,.json,.gz">
 
             <!-- Quick Presets & Downloaders -->
             <div
@@ -1684,10 +1680,10 @@
               <div class="config-field">
                 <label class="config-label">Task Family</label>
                 <select id="cfgTask" class="config-select">
-                  <option value="left_right">Left vs. Right Fist (64-Ch PhysioNet)</option>
-                  <option value="fists_feet">Both Fists vs. Both Feet (64-Ch PhysioNet)</option>
-                  <option value="finger_2">Thumb vs Pinky Flexion (Replay Log)</option>
-                  <option value="finger_3">Thumb vs Index vs Pinky Flexion (Replay Log)</option>
+                  <option value="left_right">Left vs. Right Fist</option>
+                  <option value="fists_feet">Both Fists vs. Both Feet</option>
+                  <option value="finger_2">Thumb vs Pinky Finger Flexion</option>
+                  <option value="finger_3">Thumb vs Index vs Pinky Finger Flexion</option>
                 </select>
               </div>
               <div class="config-field">
@@ -1771,7 +1767,7 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11.5px;">
                 <div>RMS (z-score): <span class="mono" style="color:var(--teal-neon);" id="chanRms">--</span></div>
                 <div>Peak-to-peak (z-score): <span class="mono" style="color:var(--teal-neon);" id="chanP2p">--</span></div>
-                <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">-- dB</span></div>
+                <div>SNR: <span class="mono" style="color:var(--teal-neon);" id="chanSnr">n/a</span></div>
                 <div>Status: <span class="mono" style="color:var(--teal-neon);" id="chanStatus">--</span></div>
               </div>
             </div>
@@ -1846,15 +1842,15 @@
         <!-- Performance Metrics Strip -->
         <div class="metrics-strip">
           <div class="metric-card">
-            <div class="metric-num" id="statAccuracy">64.2%</div>
+            <div class="metric-num" id="statAccuracy">--</div>
             <div class="metric-lbl">Overall Accuracy (3-Class)</div>
           </div>
           <div class="metric-card">
-            <div class="metric-num" id="statWindowsCount">338</div>
+            <div class="metric-num" id="statWindowsCount">--</div>
             <div class="metric-lbl">Windows Decoded</div>
           </div>
           <div class="metric-card">
-            <div class="metric-num" id="statMeanConf">84.7%</div>
+            <div class="metric-num" id="statMeanConf">--</div>
             <div class="metric-lbl">Mean Softmax Confidence</div>
           </div>
           <div class="metric-card">
@@ -3566,9 +3562,6 @@
       if (e.target.files[0]) handleUserFile(e.target.files[0]);
     });
 
-    window.addEventListener('dragover', e => e.preventDefault(), false);
-    window.addEventListener('drop', e => e.preventDefault(), false);
-
     ['dragover', 'dragleave', 'drop'].forEach(evtName => {
       dropzone.addEventListener(evtName, e => {
         e.preventDefault();
@@ -3587,47 +3580,19 @@
 
       setStepStatus(1, 'completed', file.name);
 
-      // 1. Client-side GZ JSON parse (.json.gz)
-      if (name.endsWith('.json.gz') || (name.endsWith('.gz') && name.includes('.json'))) {
-        try {
-          if (typeof DecompressionStream !== 'undefined') {
-            const ds = new DecompressionStream('gzip');
-            const stream = file.stream().pipeThrough(ds);
-            const text = await new Response(stream).text();
-            const parsed = JSON.parse(text);
-            if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order in replay');
-            const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
-            setStepStatus(2, 'completed', `${nCh} channels loaded`);
-            setStepStatus(3, 'completed', 'Pre-filtered log verified');
-            setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
-            pendingCustomSession = parsed;
-            document.getElementById('launchLabSessionBtn').disabled = false;
-            hideLoading();
-            alert(`Successfully loaded ${file.name}!\nDecoded ${parsed.records.length} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
-            return;
-          }
-        } catch (err) {
-          hideLoading();
-          alert('Could not decompress or parse .json.gz file: ' + err.message);
-          return;
-        }
-      }
-
-      // 2. Client-side standard JSON parse (.json)
       if (name.endsWith('.json')) {
+        // Client-side JSON parse
         const reader = new FileReader();
         reader.onload = ev => {
           try {
             const parsed = JSON.parse(ev.target.result);
             if (!parsed.records || !parsed.label_order) throw new Error('Expected records and label_order');
-            const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
-            setStepStatus(2, 'completed', `${nCh} channels loaded`);
+            setStepStatus(2, 'completed', '64 channels loaded');
             setStepStatus(3, 'completed', 'Pre-filtered log verified');
             setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
             pendingCustomSession = parsed;
             document.getElementById('launchLabSessionBtn').disabled = false;
             hideLoading();
-            alert(`Successfully loaded ${file.name}!\nDecoded ${parsed.records.length} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
           } catch (err) {
             hideLoading();
             alert('Could not parse JSON inference log: ' + err.message);
@@ -3637,18 +3602,11 @@
         return;
       }
 
-      // 3. Raw EEG Upload (EDF, BDF, CSV, TSV, NPY)
-      const task = document.getElementById('cfgTask').value;
-      const sfreq = document.getElementById('cfgSfreq').value;
-
-      if (task.startsWith('finger')) {
-        hideLoading();
-        alert(`Finger tasks ('${task}') are replay-only recordings (subject S01 pilot). For custom EDF or CSV upload decoding, please select 'Left vs. Right Fist' or 'Both Fists vs. Both Feet'.`);
-        return;
-      }
-
+      // If EDF or CSV, send to backend upload API
       const formData = new FormData();
       formData.append('file', file);
+      const task = document.getElementById('cfgTask').value;
+      const sfreq = document.getElementById('cfgSfreq').value;
 
       const endpoint = name.endsWith('.edf') || name.endsWith('.bdf')
         ? `${API_BASE}/api/upload/edf?task=${task}`
@@ -3663,10 +3621,7 @@
 
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
-          const errMsg = Array.isArray(errJson.detail)
-            ? errJson.detail.map(d => d.msg || JSON.stringify(d)).join(', ')
-            : (typeof errJson.detail === 'string' ? errJson.detail : (errJson.detail ? JSON.stringify(errJson.detail) : 'HTTP ' + res.status));
-          throw new Error(errMsg);
+          throw new Error(errJson.detail || 'HTTP ' + res.status);
         }
 
         setStepStatus(2, 'completed', 'Standardized 64 channels');
@@ -3680,6 +3635,7 @@
         alert(`Successfully processed ${file.name}!\nDecoded ${resultData.total_records} windows. Click 'Launch Decoded Session' to view in 3D limbs!`);
       } catch (err) {
         hideLoading();
+        // No fake decoding: without the backend nothing can be decoded
         alert(`Could not process ${file.name}: ${err.message}\nThe backend must be running to decode uploaded recordings.`);
       }
     }
@@ -3706,8 +3662,7 @@
 
     function launchCustomSession() {
       if (!pendingCustomSession) return;
-      const t = (pendingCustomSession && pendingCustomSession.task) || 'custom';
-      setupSession(pendingCustomSession, t, pendingCustomSession.source_filename || 'Custom Ingestion');
+      setupSession(pendingCustomSession, 'custom', pendingCustomSession.source_filename || 'Custom Ingestion');
       switchTab('decoder');
       play();
     }
@@ -3719,23 +3674,30 @@
     async function loadPresetIntoLab(taskKey) {
       showLoading(`Loading bundled replay for ${taskKey}...`, 'Parsing stored inference log');
       try {
-        let parsed = null;
-        if (API_BASE) {
-          try {
-            const res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
-            if (res.ok) parsed = await res.json();
-          } catch (_) {}
+        let url = 'sample_task_a_left_right.json';
+        if (taskKey === 'fists_feet') url = 'sample_task_b_fists_feet.json';
+        else if (taskKey === 'left_right') url = 'sample_task_a_left_right.json';
+        else {
+          // Finger preset: fetch from backend or sample
+          const res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
+          if (res.ok) {
+            const parsed = await res.json();
+            setStepStatus(1, 'completed', `${taskKey}_replay.json`);
+            setStepStatus(2, 'completed', '64 channels loaded');
+            setStepStatus(3, 'completed', 'Pre-filtered log verified');
+            setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
+            pendingCustomSession = parsed;
+            document.getElementById('launchLabSessionBtn').disabled = false;
+            hideLoading();
+            alert(`Bundled replay loaded! Decoded ${parsed.records.length} windows. Click 'Launch Decoded Session'.`);
+            return;
+          }
         }
-        if (!parsed) {
-          let url = 'sample_task_a_left_right.json';
-          if (taskKey === 'fists_feet') url = 'sample_task_b_fists_feet.json';
-          const res = await fetch(url);
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          parsed = await res.json();
-        }
-        const nCh = (parsed.channel_names && parsed.channel_names.length) || 64;
-        setStepStatus(1, 'completed', `${taskKey}_replay.json`);
-        setStepStatus(2, 'completed', `${nCh} channels loaded`);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const parsed = await res.json();
+        setStepStatus(1, 'completed', url);
+        setStepStatus(2, 'completed', '64 channels loaded');
         setStepStatus(3, 'completed', 'Pre-filtered log verified');
         setStepStatus(4, 'completed', `${parsed.records.length} windows loaded`);
         pendingCustomSession = parsed;
@@ -3781,9 +3743,9 @@
     async function loadFingerDemo(k) {
       let data = null, name = 'SIMULATED DEMO · not decoded from EEG';
       try {   // a real finger replay is used automatically once the backend serves one
-        const tasks = await (await fetch(`${API_BASE}/api/tasks`)).json();
+        const tasks = await (await fetchBackend(`${API_BASE}/api/tasks`, undefined, 'Waking up the backend...')).json(); hideLoading();
         if (tasks && tasks['finger_' + k]) {
-          const res = await fetch(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`);
+          const res = await fetchBackend(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`, undefined, 'Loading the finger replay...'); hideLoading();
           if (res.ok) { data = await res.json(); name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : ''); }
         }
       } catch (e) { data = null; }
@@ -3848,16 +3810,37 @@
         loadFingerDemo(parseInt(currentTask.split('_')[1]));
       }
     }
+    /* The backend runs on a free plan that sleeps when idle. Retry for about a minute and say what is happening. */
+    async function fetchBackend(url, opts, label) {
+      const delays = [0, 4000, 6000, 8000, 10000, 12000, 15000, 20000];
+      let lastErr = null;
+      for (let i = 0; i < delays.length; i++) {
+        if (i > 0) {
+          showLoading(label || 'Waking up the backend...', 'Free hosting: the first request after an idle period can take up to a minute (attempt ' + (i + 1) + ' of ' + delays.length + ')');
+          await new Promise(r => setTimeout(r, delays[i]));
+        }
+        try {
+          const res = await fetch(url, opts);
+          if (res.status < 500) return res;          // 404 and similar are real answers: do not retry
+          lastErr = new Error('HTTP ' + res.status);
+        } catch (e) { lastErr = e; }
+      }
+      throw lastErr || new Error('backend not reachable');
+    }
+
     async function loadPresetTask(taskKey) {
       showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');
       try {
         // The replay of the exported model's held-out trials comes from the backend; the bundled sample file is only a fallback.
         let res = null, name = TASK_FILES[taskKey];
         try {
-          res = await fetch(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`);
+          res = await fetchBackend(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`, undefined, 'Waking up the backend...');
           if (res.ok) name = 'exported model replay (' + PRESET_MODE + ')'; else res = null;
         } catch (e) { res = null; }
-        if (!res) res = await fetch(TASK_FILES[taskKey]);
+        if (!res) {   // backend unreachable even after retrying: older bundled sample, clearly labelled
+          res = await fetch(TASK_FILES[taskKey]);
+          name = 'OFFLINE SAMPLE (older run, not the replay of the exported models): ' + TASK_FILES[taskKey];
+        }
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
@@ -3882,7 +3865,7 @@
         const masterRecords = [];
         const used = [];
         for (const [task, classes] of parts) {
-          const res = await fetch(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`);
+          const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
           if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
           const log = await res.json();
           used.push(log.meta && log.meta.model_id ? log.meta.model_id : task);
@@ -3919,21 +3902,25 @@
     /* ================================================================
        BACKEND HEALTH CHECK
        ================================================================ */
+    let healthFailures = 0;
     async function checkBackendHealth() {
       const pill = document.getElementById('backendStatusPill');
       const txt = document.getElementById('backendStatusText');
+      let host = window.location.host;
+      try { host = new URL(API_BASE, window.location.href).host; } catch (e) {}
       try {
         const res = await fetch(`${API_BASE}/api/health`, { method: 'GET', mode: 'cors' });
         if (res.ok) {
-          const data = await res.json();
+          healthFailures = 0;
           pill.className = 'status-pill online';
-          txt.textContent = 'BACKEND ONLINE (' + window.location.host + ')';
+          txt.textContent = 'BACKEND ONLINE (' + host + ')';
         } else {
           throw new Error();
         }
       } catch (e) {
+        healthFailures++;
         pill.className = 'status-pill offline';
-        txt.textContent = 'BACKEND OFFLINE';
+        txt.textContent = healthFailures < 18 ? 'BACKEND WAKING (free plan, up to a minute)' : 'BACKEND OFFLINE';
       }
     }
     setInterval(checkBackendHealth, 5000);
