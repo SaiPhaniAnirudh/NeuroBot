@@ -897,10 +897,6 @@
       margin-bottom: 22px;
     }
 
-    .dropzone-box * {
-      pointer-events: none;
-    }
-
     .dropzone-box:hover,
     .dropzone-box.drag-over {
       border-color: var(--teal-neon);
@@ -973,15 +969,6 @@
       border-color: var(--line-bright);
       background: rgba(0, 245, 212, 0.05);
       transform: translateY(-2px);
-    }
-
-    .preset-action-card.active {
-      border-color: var(--teal-neon) !important;
-      background: linear-gradient(135deg, rgba(0, 245, 212, 0.12), rgba(58, 134, 255, 0.12)) !important;
-      box-shadow: 0 0 12px rgba(0, 245, 212, 0.15) !important;
-    }
-    .preset-action-card.active .pac-title {
-      color: var(--teal-neon) !important;
     }
 
     .pac-title {
@@ -1586,8 +1573,9 @@
                 <span>Movement type:</span><button class="fl-preset-btn active" id="btnModeME"
                   onclick="setPresetMode('ME')">Executed (ME)</button><button class="fl-preset-btn" id="btnModeMI"
                   onclick="setPresetMode('MI')">Imagined (MI)</button></div>
-              <button class="preset-action-card active" id="taskBtnMaster" onclick="loadUnifiedMasterSession()">
-                <div class="pac-title">🌐 Composite Demo: Arms, Feet and Fingers</div>
+              <button class="preset-action-card" id="taskBtnMaster" onclick="loadUnifiedMasterSession()"
+                style="border-color:var(--teal-neon);background:linear-gradient(135deg, rgba(0,245,212,0.12), rgba(58,134,255,0.12));box-shadow:0 0 12px rgba(0,245,212,0.15);">
+                <div class="pac-title" style="color:var(--teal-neon);">🌐 Composite Demo: Arms, Feet and Fingers</div>
                 <div class="pac-desc">Plays short blocks from the stored Task A, Task B and finger replays back to back. Each block comes from a different model, so this is a composite, not one decoded session.</div>
               </button>
               <button class="preset-action-card" id="taskBtnLeftRight" onclick="loadPresetTask('left_right')">
@@ -1894,15 +1882,13 @@
   </div>
 
   <!-- Loading Modal Overlay -->
-  <div class="modal-overlay" id="loadingModal" onclick="if(event.target===this) hideLoading()">
-    <div class="modal-card" style="position:relative;">
-      <button onclick="hideLoading()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;" title="Dismiss">✕</button>
+  <div class="modal-overlay" id="loadingModal">
+    <div class="modal-card">
       <div class="spinner-ring"></div>
       <div style="font-size:16px;font-weight:700;color:#FFF;margin-bottom:6px;" id="loadingModalTitle">Decoding Neural
         Signals...</div>
-      <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px;" id="loadingModalSub">Applying CAR & 4-40Hz filtering, batch
+      <div style="font-size:13px;color:var(--text-dim);" id="loadingModalSub">Applying CAR & 4-40Hz filtering, batch
         inference</div>
-      <button class="fl-preset-btn" onclick="hideLoading()" style="font-size:11px;padding:4px 14px;margin-top:4px;">Dismiss / Continue in background</button>
     </div>
   </div>
 
@@ -1923,23 +1909,6 @@
     let playing = false;
     let playTimer = null;
     let currentTask = 'left_right';
-    const REPLAY_CACHE = {};
-
-    function updateActiveTaskButton(taskKey) {
-      const map = {
-        'master': 'taskBtnMaster',
-        'left_right': 'taskBtnLeftRight',
-        'fists_feet': 'taskBtnFistsFeet',
-        'finger_2': 'taskBtnFinger2',
-        'finger_3': 'taskBtnFinger3'
-      };
-      document.querySelectorAll('.preset-action-card').forEach(b => b.classList.remove('active'));
-      const btnId = map[taskKey];
-      if (btnId) {
-        const el = document.getElementById(btnId);
-        if (el) el.classList.add('active');
-      }
-    }
 
     let selectedChannelName = 'C3';
     let selectedChannelIndex = 8;
@@ -1999,7 +1968,6 @@
       records = data.records || [];
       labelOrder = data.label_order || ['left', 'rest', 'right'];
       currentTask = taskKey || 'custom';
-      updateActiveTaskButton(currentTask);
       if (!data.channel_names || !data.channel_names.length) {
         data.channel_names = ['C3', 'CZ', 'C4', 'FC3', 'CP3', 'CP4'];
       }
@@ -3029,8 +2997,9 @@
         cameraTarget.look.set(0, -1.25, 0);
       } else if (mode === 'fingers') {
         // Direct cinematic focus on right metallic bionic hand & articulated digits
-        cameraTarget.pos.set(0.85, 0.20, 2.4);
-        cameraTarget.look.set(0.80, 0.10, 0.65);
+        // When a finger is decoded the right arm is raised in front of the body (hand near x 0.45, y 1.15, z 2.0)
+        cameraTarget.pos.set(0.75, 1.20, 4.30);
+        cameraTarget.look.set(0.45, 1.10, 2.00);
       } else {
         // 'all' Full Humanoid Body Centered View
         cameraTarget.pos.set(0, -0.15, 6.8);
@@ -3174,19 +3143,18 @@
       requestAnimationFrame(animateRobot);
       if (!robotInited || !robotRenderer) return;
 
-      const sp = 0.18;
-      const camSp = 0.18;
-      const orbitX = Math.sin(orbitRotation.yaw) * cameraTarget.pos.z;
+      const sp = 0.12;
+      const orbitX = cameraTarget.pos.x + Math.sin(orbitRotation.yaw) * cameraTarget.pos.z;
       const orbitZ = Math.cos(orbitRotation.yaw) * cameraTarget.pos.z;
       const orbitY = cameraTarget.pos.y + Math.sin(orbitRotation.pitch) * 2;
 
-      robotCamera.position.x += (orbitX - robotCamera.position.x) * camSp;
-      robotCamera.position.y += (orbitY - robotCamera.position.y) * camSp;
-      robotCamera.position.z += (orbitZ - robotCamera.position.z) * camSp;
+      robotCamera.position.x += (orbitX - robotCamera.position.x) * 0.08;
+      robotCamera.position.y += (orbitY - robotCamera.position.y) * 0.08;
+      robotCamera.position.z += (orbitZ - robotCamera.position.z) * 0.08;
 
-      currentLook.x += (cameraTarget.look.x - currentLook.x) * camSp;
-      currentLook.y += (cameraTarget.look.y - currentLook.y) * camSp;
-      currentLook.z += (cameraTarget.look.z - currentLook.z) * camSp;
+      currentLook.x += (cameraTarget.look.x - currentLook.x) * 0.08;
+      currentLook.y += (cameraTarget.look.y - currentLook.y) * 0.08;
+      currentLook.z += (cameraTarget.look.z - currentLook.z) * 0.08;
       robotCamera.lookAt(currentLook);
 
       // Torso Torsion & Flexion
@@ -3460,26 +3428,14 @@
       const names = (logData && logData.channel_names) || [];
       let col = -1, allMean = false;
       if (rec && rec.bands) {
-        if (names.length) {
-          col = names.indexOf(selectedChannelName);
-          if (col < 0) {
-            const nearest = {
-              'FC1': 'FC3', 'FC5': 'FC3', 'C1': 'C3', 'C5': 'C3', 'CP1': 'CPZ', 'CP3': 'C3', 'CP5': 'C3',
-              'FC2': 'FC4', 'FC6': 'FC4', 'C2': 'C4', 'C6': 'C4', 'CP2': 'CPZ', 'CP4': 'C4', 'CP6': 'C4',
-              'FZ': 'CZ', 'PZ': 'CPZ', 'FP1': 'FC3', 'FP2': 'FC4', 'F3': 'FC3', 'F4': 'FC4', 'P3': 'C3', 'P4': 'C4'
-            };
-            const mapped = nearest[selectedChannelName];
-            if (mapped && names.indexOf(mapped) >= 0) col = names.indexOf(mapped);
-            else col = 0;
-          }
-        }
+        if (names.length) col = names.indexOf(selectedChannelName);
         else if (rec.bands.mu && rec.bands.mu.length === 1) { col = 0; allMean = true; }
       }
       const map = { Theta: 'theta', Alpha: 'mu', Beta: 'beta', Gamma: 'gamma_low' };
       ['Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'].forEach(b => {
         const bar = document.getElementById('bandFill' + b);
         const key = map[b];
-        if (col >= 0 && key && rec && rec.bands && rec.bands[key] && rec.bands[key][col] != null) {
+        if (col >= 0 && key && rec.bands[key] && rec.bands[key][col] != null) {
           const v = rec.bands[key][col];
           if (bar) bar.style.width = Math.min(100, v * 100) + '%';
           set('bandVal' + b, (v * 100).toFixed(1) + '%');
@@ -3488,7 +3444,7 @@
           set('bandVal' + b, b === 'Delta' ? 'outside filter' : 'not computed');
         }
       });
-      if (head) head.textContent = (col >= 0 && rec && rec.bands)
+      if (head) head.textContent = col >= 0
         ? 'Relative band power (share of the 4–40 Hz power of the stored 1 s window' + (allMean ? ', mean over all channels' : '') + ')'
         : 'Frequency band power (not computed: the stored traces are decimated 4×, which aliases the 20–40 Hz part)';
       if (!trace || !trace.length) {
@@ -3574,13 +3530,11 @@
 
     function exportSessionJson() {
       if (!logData) return;
-      const blob = new Blob([JSON.stringify(logData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logData, null, 2));
       const dlAnchor = document.createElement('a');
-      dlAnchor.href = url;
-      dlAnchor.download = `neurobot_inference_log_${Date.now()}.json`;
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `neurobot_inference_log_${Date.now()}.json`);
       dlAnchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
     function exportSummaryCsv() {
@@ -3782,49 +3736,27 @@
           const m = Math.max(...z), e = z.map(v => Math.exp(v - m)), sum = e.reduce((a, b) => a + b, 0);
           const probs = {}; labels.forEach((l, i) => { probs[l] = e[i] / sum; });
           const pred = labels.reduce((a, b) => (probs[a] >= probs[b] ? a : b));
-          const bands = {
-            theta: [0.24 + rnd() * 0.04, 0.32 + rnd() * 0.04, 0.28 + rnd() * 0.04],
-            mu: [cue !== 'rest' ? 0.18 + rnd() * 0.03 : 0.44 + rnd() * 0.05, 0.30 + rnd() * 0.04, 0.36 + rnd() * 0.04],
-            beta: [cue !== 'rest' ? 0.48 + rnd() * 0.05 : 0.20 + rnd() * 0.03, 0.32 + rnd() * 0.04, 0.28 + rnd() * 0.04],
-            gamma_low: [0.08 + rnd() * 0.02, 0.06 + rnd() * 0.02, 0.08 + rnd() * 0.02]
-          };
-          recs.push({ t: recs.length * 0.125, trial, true_class: cue, predicted_class: pred, probs, bands });
+          recs.push({ t: recs.length * 0.125, trial, true_class: cue, predicted_class: pred, probs });
         }
       }
-      return { label_order: labels, channel_names: ['C3', 'CZ', 'C4'], meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
+      return { label_order: labels, meta: { simulated: true, source: 'Simulated demo, not decoded from EEG' }, records: recs };
     }
     async function loadFingerDemo(k) {
-      updateActiveTaskButton('finger_' + k);
-      const cacheKey = `finger_${k}_${PRESET_MODE}`;
-      if (REPLAY_CACHE[cacheKey]) {
-        const cached = REPLAY_CACHE[cacheKey];
-        hideLoading();
-        setupSession(cached.data, 'finger_' + k, cached.name);
-        switchTab('decoder');
-        play();
-        return;
-      }
-      // Instant display: load simulated session immediately with 0 delay
-      const simData = buildSimulatedFingerSession(k);
-      setupSession(simData, 'finger_' + k, 'SIMULATED DEMO · not decoded from EEG');
-      switchTab('decoder');
-      play();
-      hideLoading();
-
-      // In background, fetch full held-out trials replay from backend
-      try {
+      let data = null, name = '', why = '';
+      showLoading('Loading the finger replay...', 'Real EEG and decoded windows of subject S01 (about 4 MB); the first request after an idle period can take longer');
+      try {   // the real finger replay is used whenever the backend serves it
         const res = await fetchBackend(`${API_BASE}/api/replay/log/finger_${k}?mode=${PRESET_MODE}`, undefined, 'Loading the finger replay...');
-        if (res.ok) {
-          const data = await res.json();
-          const name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : '');
-          REPLAY_CACHE[cacheKey] = { data, name };
-          if (currentTask === 'finger_' + k) {
-            setupSession(data, 'finger_' + k, name);
-          }
-        }
-      } catch (e) { } finally {
-        hideLoading();
+        if (res.ok) { data = await res.json(); name = ((data.meta && data.meta.model_id) || 'finger replay') + ' · held-out trials' + ((data.meta && data.meta.training_note) ? ' · ' + data.meta.training_note : ''); }
+        else why = 'HTTP ' + res.status;
+      } catch (e) { data = null; why = (e && e.message) || 'network error'; }
+      hideLoading();
+      if (!data) {
+        data = buildSimulatedFingerSession(k);
+        name = 'SIMULATED DEMO · not decoded from EEG · the real finger replay could not be loaded (' + (why || 'no answer') + ')';
+        console.warn('Finger replay not loaded:', why);
       }
+      setupSession(data, 'finger_' + k, name);
+      switchTab('decoder');
     }
     /* 2D close-up of the right hand; same finger order and proportions as the 3D robot hand (buildMetallicArm) */
     const FI_FINGERS = [{ k: 'thumb', n: 'Thumb', x: -0.19, y: 0.08, len: 0.20, rot: 26 }, { k: 'index', n: 'Index', x: -0.10, y: 0.26, len: 0.27 }, { k: 'middle', n: 'Middle', x: -0.03, y: 0.27, len: 0.30 }, { k: 'ring', n: 'Ring', x: 0.04, y: 0.26, len: 0.28 }, { k: 'pinky', n: 'Pinky', x: 0.11, y: 0.24, len: 0.23 }];
@@ -3883,19 +3815,17 @@
         loadFingerDemo(parseInt(currentTask.split('_')[1]));
       }
     }
-    /* The backend runs on a free plan that sleeps when idle. Retry with short delays and safe timeouts. */
+    /* The backend runs on a free plan that sleeps when idle. Retry for about a minute and say what is happening. */
     async function fetchBackend(url, opts, label) {
-      const delays = [0, 1200, 2500];
+      const delays = [0, 4000, 6000, 8000, 10000, 12000, 15000, 20000];
       let lastErr = null;
       for (let i = 0; i < delays.length; i++) {
         if (i > 0) {
+          showLoading(label || 'Waking up the backend...', 'Free hosting: the first request after an idle period can take up to a minute (attempt ' + (i + 1) + ' of ' + delays.length + ')');
           await new Promise(r => setTimeout(r, delays[i]));
         }
         try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 6500);
-          const res = await fetch(url, { ...opts, signal: controller.signal });
-          clearTimeout(timer);
+          const res = await fetch(url, opts);
           if (res.status < 500) return res;          // 404 and similar are real answers: do not retry
           lastErr = new Error('HTTP ' + res.status);
         } catch (e) { lastErr = e; }
@@ -3904,68 +3834,31 @@
     }
 
     async function loadPresetTask(taskKey) {
-      updateActiveTaskButton(taskKey);
-      const cacheKey = `${taskKey}_${PRESET_MODE}`;
-      if (REPLAY_CACHE[cacheKey]) {
-        const cached = REPLAY_CACHE[cacheKey];
-        hideLoading();
-        setupSession(cached.data, taskKey, cached.name);
-        switchTab('decoder');
-        play();
-        return;
-      }
-
-      // Fast display: if bundled sample is available, load it immediately with 0 wait
-      if (TASK_FILES[taskKey]) {
-        try {
-          const fallbackRes = await fetch(TASK_FILES[taskKey]);
-          if (fallbackRes.ok) {
-            const fallbackData = await fallbackRes.json();
-            const fallbackName = 'exported model replay (' + PRESET_MODE + ')';
-            setupSession(fallbackData, taskKey, fallbackName);
-            switchTab('decoder');
-            play();
-            hideLoading();
-          }
-        } catch (e) { }
-      }
-
-      // In background, fetch the high-resolution replay from backend and seamlessly update
+      showLoading('Loading ' + (taskKey === 'left_right' ? 'Left / Right Fist' : 'Fists & Feet') + ' replay...');
       try {
+        // The replay of the exported model's held-out trials comes from the backend; the bundled sample file is only a fallback.
         let res = null, name = TASK_FILES[taskKey];
         try {
           res = await fetchBackend(`${API_BASE}/api/replay/log/${taskKey}?mode=${PRESET_MODE}`, undefined, 'Waking up the backend...');
           if (res.ok) name = 'exported model replay (' + PRESET_MODE + ')'; else res = null;
         } catch (e) { res = null; }
-        if (!res && TASK_FILES[taskKey]) {
+        if (!res) {   // backend unreachable even after retrying: older bundled sample, clearly labelled
           res = await fetch(TASK_FILES[taskKey]);
           name = 'OFFLINE SAMPLE (older run, not the replay of the exported models): ' + TASK_FILES[taskKey];
         }
-        if (res && res.ok) {
-          const data = await res.json();
-          if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
-          REPLAY_CACHE[cacheKey] = { data, name };
-          if (currentTask === taskKey) {
-            setupSession(data, taskKey, name);
-          }
-        }
-      } catch (err) {
-      } finally {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data.meta && data.meta.model_id) name = data.meta.model_id + ' · held-out trials' + (data.meta.training_note ? ' · ' + data.meta.training_note : '');
         hideLoading();
+        setupSession(data, taskKey, name);
+        switchTab('decoder');
+      } catch (err) {
+        hideLoading();
+        alert('Could not auto-load dataset: ' + err.message);
       }
     }
 
     async function loadUnifiedMasterSession() {
-      updateActiveTaskButton('master');
-      const cacheKey = `master_${PRESET_MODE}`;
-      if (REPLAY_CACHE[cacheKey]) {
-        const cached = REPLAY_CACHE[cacheKey];
-        hideLoading();
-        setupSession(cached.data, 'master', cached.name);
-        switchTab('decoder');
-        play();
-        return;
-      }
       showLoading('Building composite replay...', 'Stored Task A, Task B and finger replays, played back to back');
       try {
         const parts = [
@@ -3976,30 +3869,10 @@
         const BLOCK = 8;
         const masterRecords = [];
         const used = [];
-
-        // Fetch required parts in parallel or from cache/fallback
-        const logs = await Promise.all(parts.map(async ([task]) => {
-          const subKey = `${task}_${PRESET_MODE}`;
-          if (REPLAY_CACHE[subKey]) return REPLAY_CACHE[subKey].data;
-          try {
-            const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
-            if (res.ok) {
-              const log = await res.json();
-              const logName = log.meta && log.meta.model_id ? log.meta.model_id + ' · held-out trials' : task;
-              REPLAY_CACHE[subKey] = { data: log, name: logName };
-              return log;
-            }
-          } catch (e) { }
-          if (TASK_FILES[task]) {
-            const res2 = await fetch(TASK_FILES[task]);
-            if (res2.ok) return await res2.json();
-          }
-          if (task === 'finger_3') return buildSimulatedFingerSession(3);
-          throw new Error('Could not load ' + task);
-        }));
-
-        parts.forEach(([task, classes], idx) => {
-          const log = logs[idx];
+        for (const [task, classes] of parts) {
+          const res = await fetchBackend(`${API_BASE}/api/replay/log/${task}?mode=${PRESET_MODE}`, undefined, 'Building composite replay...');
+          if (!res.ok) throw new Error(task + ': HTTP ' + res.status);
+          const log = await res.json();
           used.push(log.meta && log.meta.model_id ? log.meta.model_id : task);
           for (const cls of classes) {
             const start = log.records.findIndex(r => r.true_class === cls);
@@ -4011,8 +3884,7 @@
               masterRecords.push(rec);
             });
           }
-        });
-
+        }
         const masterData = {
           label_order: ['left', 'right', 'both_fists', 'both_feet', 'thumb', 'index', 'pinky', 'rest'],
           channel_names: [],
@@ -4023,12 +3895,9 @@
           },
           records: masterRecords
         };
-        const masterName = 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)';
-        REPLAY_CACHE[cacheKey] = { data: masterData, name: masterName };
         hideLoading();
-        setupSession(masterData, 'master', masterName);
+        setupSession(masterData, 'master', 'Composite replay: Task A + Task B + finger blocks (separate models, stored outputs)');
         switchTab('decoder');
-        play();
       } catch (err) {
         hideLoading();
         alert('Could not build the composite replay: ' + err.message);
@@ -4062,18 +3931,12 @@
     setInterval(checkBackendHealth, 5000);
     checkBackendHealth();
 
-    let loadingSafetyTimer = null;
     function showLoading(title, sub) {
       document.getElementById('loadingModalTitle').textContent = title || 'Loading...';
       document.getElementById('loadingModalSub').textContent = sub || 'Processing';
       document.getElementById('loadingModal').classList.add('active');
-      clearTimeout(loadingSafetyTimer);
-      loadingSafetyTimer = setTimeout(() => {
-        hideLoading();
-      }, 4000); // Auto-dismiss after 4s so loading never stays on screen
     }
     function hideLoading() {
-      clearTimeout(loadingSafetyTimer);
       document.getElementById('loadingModal').classList.remove('active');
     }
 

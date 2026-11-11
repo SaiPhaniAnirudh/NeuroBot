@@ -25,10 +25,10 @@ from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -61,7 +61,9 @@ ALL_TASKS = {**TASK_LABEL_ORDER, **FINGER_LABEL_ORDER}
 async def lifespan(app: FastAPI):
     model_registry.load()
     log.info("loaded %d model(s); problems: %s", model_registry.n_models(), model_registry.load_errors() or "none")
+    warm = asyncio.create_task(asyncio.to_thread(_warm_replays))   # build the compressed replay payloads in the background
     yield
+    warm.cancel()
 
 
 app = FastAPI(title="NeuroBot API", version=VERSION, lifespan=lifespan)
@@ -118,6 +120,45 @@ def _load_replay(task: str, mode: Optional[str]):
         data["provenance"] = prov
     data["replay_file"] = fname
     return data
+
+
+_REPLAY_GZ: dict = {}
+
+
+def _replay_gz(task: str, mode: Optional[str]) -> bytes:
+    """The replay log as ready-made gzipped JSON, built once. The finger logs carry EEG and are about 17 MB as JSON;
+    parsing, re-encoding and compressing them on every request took seconds, so the result is cached."""
+    found = _find_replay(task, mode)
+    if not found:
+        raise HTTPException(status_code=404, detail=f"No replay log exists for task '{task}'" + (f", mode '{mode}'." if mode else "."))
+    fname, _ = found
+    path = _replay_path(fname)
+    idx = os.path.join(DATA_DIR, "replay_index.json")
+    st, si = os.stat(path), (os.stat(idx) if os.path.exists(idx) else None)
+    key = (path, st.st_mtime_ns, st.st_size, si.st_mtime_ns if si else 0)
+    hit = _REPLAY_GZ.get(path)
+    if hit and hit[0] == key:
+        return hit[1]
+    if path.endswith(".gz"):
+        # Compressed logs are stored ready to serve (provenance and replay_file already inside), so nothing is parsed or re-encoded.
+        with open(path, "rb") as fh:
+            gz = fh.read()
+        _REPLAY_GZ[path] = (key, gz)
+        return gz
+    data = _load_replay(task, mode)
+    gz = gzip.compress(json.dumps(data, separators=(",", ":")).encode("utf-8"), compresslevel=6)
+    _REPLAY_GZ[path] = (key, gz)
+    return gz
+
+
+def _warm_replays() -> None:
+    for task in ALL_TASKS:
+        for mode in model_registry.MODES:
+            try:
+                if _find_replay(task, mode):
+                    _replay_gz(task, mode)
+            except Exception as exc:   # warming is best effort
+                log.warning("could not warm replay %s/%s: %s", task, mode, exc)
 
 
 # ── status ─────────────────────────────────────────────────────────────────
@@ -201,10 +242,13 @@ def predict(req: PredictRequest):
 # ── replay ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/replay/log/{task}")
-def get_replay_log(task: str, mode: Optional[ModeName] = None):
+def get_replay_log(request: Request, task: str, mode: Optional[ModeName] = None):
     if task not in ALL_TASKS:
         raise HTTPException(status_code=404, detail=f"Unknown task '{task}'. Valid: {list(ALL_TASKS)}")
-    return _load_replay(task, mode)
+    gz = _replay_gz(task, mode)
+    if "gzip" in request.headers.get("accept-encoding", ""):
+        return Response(gz, media_type="application/json", headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
+    return Response(gzip.decompress(gz), media_type="application/json")
 
 
 @app.websocket("/ws/replay/{task}")

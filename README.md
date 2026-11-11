@@ -93,8 +93,8 @@ logs (window count, trial ids, true classes and the exported model's predictions
 band power (theta, mu, beta, low gamma) into copies of the logs.
 
 * Limb replays: 6 channels (C3, CZ, C4, FC3, FC4, CPZ) at 160 Hz. The model reproduces the stored predictions on 100% of windows.
-* Finger replays (S01): 3 channels at 100 Hz. The finger recordings use the BioSemi 128 layout, so the nearest electrodes D19, A1 and B22 stand in for C3, CZ and C4 (approximate). Every stored window was matched to a rebuilt window of the same trial by its ONNX probabilities.
-* The large finger logs are stored as `replay_finger_*.json.gz`; the backend reads both `.json` and `.json.gz`.
+* Finger replays (S01): 3 channels at 100 Hz. The finger recordings use the BioSemi 128 layout, so the electrodes D19, A1 and B22, which BioSemi's position file lists at the 10-20 positions of C3, Cz and C4, are shown under those names. Every stored window was matched to a rebuilt window of the same trial by its ONNX probabilities.
+* The large finger logs are stored as `replay_finger_*.json.gz`, already containing `provenance` and `replay_file`; the backend serves those files as they are (no parsing), and still reads plain `.json` logs the old way.
 * Band power is relative power of the z-scored 1 s window (1 Hz resolution). No signal-to-noise ratio is computed.
 
 ## Known limits

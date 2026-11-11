@@ -67,8 +67,11 @@ def main():
         for mode in ("ME", "MI"):
             tag = f"{task} {mode}"
             try:
-                s, b = get(f"{api}/api/replay/log/{task}?mode={mode}")
+                t0 = time.time()
+                s, b = get(f"{api}/api/replay/log/{task}?mode={mode}", 120)
+                secs = time.time() - t0
                 d = json.loads(b)
+                check(f"{tag}: answered in under 30 s", secs < 30, f"{secs:.1f} s, {len(b) / 1e6:.1f} MB")
                 recs = d["records"]; sig = d.get("meta", {}).get("signal", {})
                 check(f"{tag}: replay served", s == 200 and len(recs) > 100, f"{len(recs)} windows")
                 r = recs[len(recs) // 2]
